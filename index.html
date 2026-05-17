@@ -217,6 +217,20 @@
 <script src="https://cdn.bootcdn.net/ajax/libs/three.js/r128/three.min.js"></script>
 
 <script>
+// Debug: show status on page
+(function() {
+  var el = document.getElementById('controls-hint');
+  if (typeof THREE === 'undefined') {
+    el.textContent = '❌ Three.js 加载失败！CDN 不可访问。';
+    el.style.color = '#f85149';
+    el.style.fontSize = '14px';
+  } else {
+    el.textContent = '✅ Three.js r' + THREE.REVISION + ' 已加载';
+    el.style.color = '#3fb950';
+    el.style.fontSize = '13px';
+  }
+})();
+
 // ────────────────────────────────────
 // Simple OrbitControls (inline)
 // ────────────────────────────────────
@@ -1195,24 +1209,29 @@ function init() {
   updateInfoPanel('pacemaker');
 }
 
-init();
-
-// ────────────────────────────────────
-// Animation Loop
-// ────────────────────────────────────
 function animate() {
   requestAnimationFrame(animate);
   controls.update();
   renderer.render(scene, camera);
 }
 
-animate();
-
-// Log success
-console.log('🏥 医疗设备3D模型展示已就绪');
-console.log('  Three.js r' + THREE.REVISION);
-console.log('  已加载设备:', DEVICES.map(d => d.name).join(', '));
-console.log('  操作: 鼠标拖拽旋转 | 滚轮缩放 | 右键平移 | 方向键切换设备');
+try {
+  init();
+  animate();
+  var hint = document.getElementById('controls-hint');
+  hint.textContent = '🖱 拖拽旋转 | 滚轮缩放 | 右键平移 | 方向键切换设备';
+  hint.style.color = 'rgba(139, 148, 158, 0.7)';
+  hint.style.fontSize = '11px';
+  console.log('🏥 医疗设备3D模型展示已就绪');
+  console.log('  Three.js r' + THREE.REVISION);
+  console.log('  已加载设备:', DEVICES.map(function(d) { return d.name; }).join(', '));
+} catch(e) {
+  var hint = document.getElementById('controls-hint');
+  hint.textContent = '❌ 渲染错误: ' + e.message + ' (行 ' + e.lineNumber + ')';
+  hint.style.color = '#f85149';
+  hint.style.fontSize = '12px';
+  console.error('Init error:', e);
+}
 </script>
 
 </body>
