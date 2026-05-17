@@ -234,151 +234,516 @@
       return new THREE.MeshStandardMaterial({color:color, roughness:roughness||0.4, metalness:metalness||0.05});
     }
 
-    // ── MODEL: Pacemaker ──
+    // ── MODEL: Pacemaker (心脏起搏器) ──
     function createPacemaker(){
       var g = new THREE.Group();
-      g.add(createMesh(new THREE.BoxGeometry(0.8,0.45,1.05,4,3,4), M(0xd4d4d4,0.18,0.75)));
-      g.add(createMesh(new THREE.BoxGeometry(0.82,0.08,1.07), M(0xb0b0b0,0.1,0.95))).position.y = 0.24;
-      var header = createMesh(new THREE.BoxGeometry(0.55,0.28,0.3),
-        new THREE.MeshStandardMaterial({color:0xf8f8f8,roughness:0.1,metalness:0.1,opacity:0.82,transparent:true}));
-      header.position.set(0,0.38,0); g.add(header);
-      for(var zi=-1;zi<=1;zi+=2){
-        var port = createMesh(new THREE.CylinderGeometry(0.04,0.04,0.08,16), M(0x999999,0.05,0.95));
-        port.position.set(0,0.42,zi*0.08); port.rotation.x = Math.PI/2; g.add(port);
+      var Ti = M(0xc0c0c0,0.15,0.7); // Titanium can material
+      var TiDark = M(0x909090,0.1,0.8);
+      var Epoxy = new THREE.MeshStandardMaterial({color:0xf5f5f5,roughness:0.08,metalness:0.05,opacity:0.78,transparent:true,depthWrite:true});
+      var LeadMat = new THREE.MeshStandardMaterial({color:0x2a2a2a,roughness:0.4,metalness:0.1});
+
+      // Main titanium can - rounded by using chamfered box illusion
+      var can = createMesh(new THREE.BoxGeometry(0.75,0.42,0.95,6,4,6), Ti);
+      g.add(can);
+      // Can edge bevel simulation - thin plates on edges
+      [-0.375,0.375].forEach(function(x){
+        var edge = createMesh(new THREE.BoxGeometry(0.04,0.38,0.91), TiDark);
+        edge.position.set(x,0,0); g.add(edge);
+      });
+      [-0.475,0.475].forEach(function(z){
+        var edge2 = createMesh(new THREE.BoxGeometry(0.71,0.38,0.04), TiDark);
+        edge2.position.set(0,0,z); g.add(edge2);
+      });
+
+      // Can top rim
+      var rim = createMesh(new THREE.BoxGeometry(0.77,0.06,0.97), TiDark);
+      rim.position.y = 0.22; g.add(rim);
+
+      // Epoxy header block - with proper shape
+      var headerBase = createMesh(new THREE.BoxGeometry(0.58,0.26,0.28,4,3,3), Epoxy);
+      headerBase.position.set(0,0.38,0); g.add(headerBase);
+      // Header top rounding
+      var headerTop = createMesh(new THREE.CylinderGeometry(0.12,0.12,0.28,20), Epoxy);
+      headerTop.position.set(0,0.48,0); headerTop.rotation.z = Math.PI/2; g.add(headerTop);
+
+      // IS-1 connector ports (2 ports on header)
+      for(var pi=0;pi<2;pi++){
+        var zOff = (pi-0.5)*0.18;
+        // Port bore
+        var bore = createMesh(new THREE.CylinderGeometry(0.045,0.045,0.12,20), M(0x666666,0.05,0.9));
+        bore.position.set(0,0.43,zOff); bore.rotation.x = Math.PI/2; g.add(bore);
+        // Port ring
+        var portRing = createMesh(new THREE.TorusGeometry(0.05,0.015,12,20), M(0xaaaaaa,0.05,0.95));
+        portRing.position.set(0.06,0.43,zOff); g.add(portRing);
+        // Set screw (tiny)
+        var screw = createMesh(new THREE.CylinderGeometry(0.012,0.012,0.03,10), M(0x888888,0.05,0.9));
+        screw.position.set(0,0.48,zOff); g.add(screw);
       }
-      var lead1 = createMesh(createTubeCurve([[0,0.42,-0.08],[0.15,0.15,-0.45],[0.35,-0.35,-0.9],[0.5,-0.75,-1.2],[0.55,-1.05,-1.35]],0.018,64,12), P(0x333333,0.5,0.3));
-      g.add(lead1);
-      var lead2 = createMesh(createTubeCurve([[0,0.42,0.08],[-0.12,0.18,0.4],[-0.3,-0.3,0.85],[-0.45,-0.7,1.15],[-0.5,-1.0,1.3]],0.018,64,12), P(0x333333,0.5,0.3));
-      g.add(lead2);
-      for(var ti=0;ti<2;ti++){
-        var tipPos = ti===0?[0.55,-1.05,-1.35]:[-0.5,-1.0,1.3];
-        var tip = createMesh(new THREE.SphereGeometry(0.03,12,12), M(0xcccccc,0.05,0.95));
+
+      // Lead wires with IS-1 connector boots
+      function makeLead(startX, startY, startZ, pts){
+        // Connector boot (thicker part near header)
+        var bootGeo = new THREE.CylinderGeometry(0.04,0.055,0.2,16);
+        var boot = createMesh(bootGeo, M(0x555555,0.3,0.3));
+        boot.position.set(startX+0.1,startY,startZ);
+        boot.rotation.z = -Math.PI/2;
+        g.add(boot);
+        // Flex lead
+        var leadPts = [[startX+0.2,startY,startZ]].concat(pts);
+        var lead = createMesh(createTubeCurve(leadPts,0.018,80,12), LeadMat);
+        g.add(lead);
+        // Electrode tip
+        var tipPos = pts[pts.length-1];
+        var tip = createMesh(new THREE.SphereGeometry(0.035,14,14), M(0xcccccc,0.05,0.95));
         tip.position.set(tipPos[0],tipPos[1],tipPos[2]); g.add(tip);
+        // Ring electrode
+        var ringEl = createMesh(new THREE.TorusGeometry(0.025,0.008,10,14), M(0xdddddd,0.05,0.95));
+        ringEl.position.set(tipPos[0],tipPos[1]-0.04,tipPos[2]); g.add(ringEl);
       }
+      makeLead(0,0.43,-0.08,[[0.35,0.15,-0.5],[0.55,-0.3,-1.0],[0.6,-0.8,-1.4]]);
+      makeLead(0,0.43,0.08,[[-0.35,0.15,0.5],[-0.55,-0.3,1.0],[-0.6,-0.8,1.4]]);
+
+      // Manufacturer label plate on can
+      var label = createMesh(new THREE.PlaneGeometry(0.35,0.12),
+        new THREE.MeshStandardMaterial({color:0x333333,roughness:0.5,metalness:0.3,emissive:0x111111,emissiveIntensity:0.3}));
+      label.position.set(0,0.002,0.48); g.add(label);
+
+      // Suture holes (small loops on can sides)
+      for(var si=0;si<4;si++){
+        var angle = si*Math.PI/2;
+        var sx = Math.cos(angle)*0.38;
+        var sz = Math.sin(angle)*0.48;
+        var suture = createMesh(new THREE.TorusGeometry(0.04,0.012,8,12), TiDark);
+        suture.position.set(sx,0.2,sz);
+        suture.rotation.y = angle;
+        g.add(suture);
+      }
+
       return g;
     }
 
-    // ── MODEL: CT Scanner ──
+    // ── MODEL: CT Scanner (CT扫描仪) ──
     function createCTScanner(){
       var g = new THREE.Group();
-      var outerRing = createMesh(new THREE.TorusGeometry(1.6,0.48,32,80), P(0xf5f5f5,0.3,0.1));
-      outerRing.rotation.x = Math.PI/2; g.add(outerRing);
-      var innerRing = createMesh(new THREE.TorusGeometry(1.35,0.04,16,80),
-        new THREE.MeshStandardMaterial({color:0x2196f3,roughness:0.3,metalness:0.1,emissive:0x0d3b66,emissiveIntensity:0.4}));
-      innerRing.rotation.x = Math.PI/2; g.add(innerRing);
-      var gantryBase = createMesh(new THREE.BoxGeometry(0.9,0.35,0.9), P(0xe0e0e0,0.3,0.2));
-      gantryBase.position.y = -1.95; g.add(gantryBase);
-      var gantryNeck = createMesh(new THREE.BoxGeometry(0.5,0.4,0.6), P(0xe8e8e8,0.25,0.15));
-      gantryNeck.position.y = -1.6; g.add(gantryNeck);
-      var bed = createMesh(new THREE.BoxGeometry(0.55,0.15,3.8), P(0xe8e8e8,0.35,0.1));
-      bed.position.set(0,-0.55,0.3); g.add(bed);
-      var mattress = createMesh(new THREE.BoxGeometry(0.5,0.07,3.6),
-        new THREE.MeshStandardMaterial({color:0x5b9bd5,roughness:0.6,metalness:0}));
-      mattress.position.set(0,-0.44,0.28); g.add(mattress);
-      var pillar = createMesh(new THREE.BoxGeometry(0.4,0.7,0.4), P(0xdcdcdc,0.3,0.2));
-      pillar.position.set(0,-1.3,1.6); g.add(pillar);
-      var panel = createMesh(new THREE.BoxGeometry(0.25,0.45,0.18), P(0xd8d8d8,0.25,0.15));
-      panel.position.set(1.75,0.1,0); g.add(panel);
+      var White = P(0xf2f2f2,0.25,0.08);
+      var Gray = P(0xd0d0d0,0.3,0.15);
+      var DarkGray = P(0x888888,0.25,0.2);
+      var BlueAccent = new THREE.MeshStandardMaterial({color:0x1976d2,roughness:0.3,metalness:0.1,emissive:0x0a2a4a,emissiveIntensity:0.3});
+
+      // ── Gantry (扫描架) ──
+      // Main outer housing
+      var outerHousing = createMesh(new THREE.TorusGeometry(1.55,0.52,36,90), White);
+      outerHousing.rotation.x = Math.PI/2; g.add(outerHousing);
+
+      // Front bezel ring
+      var frontBezel = createMesh(new THREE.TorusGeometry(1.65,0.12,24,90), P(0xe8e8e8,0.2,0.2));
+      frontBezel.rotation.x = Math.PI/2; frontBezel.position.z = 0.05; g.add(frontBezel);
+
+      // Rear housing ring
+      var rearHousing = createMesh(new THREE.TorusGeometry(1.58,0.15,24,90), P(0xdddddd,0.3,0.1));
+      rearHousing.rotation.x = Math.PI/2; rearHousing.position.z = -0.25; g.add(rearHousing);
+
+      // Inner bore ring (where patient goes through)
+      var boreRing = createMesh(new THREE.TorusGeometry(1.1,0.08,24,80), P(0xcccccc,0.2,0.25));
+      boreRing.rotation.x = Math.PI/2; g.add(boreRing);
+
+      // Blue accent ring inside bore
+      var accentRing = createMesh(new THREE.TorusGeometry(1.14,0.03,16,80), BlueAccent);
+      accentRing.rotation.x = Math.PI/2; accentRing.position.z = 0.03; g.add(accentRing);
+
+      // Laser positioning lights (small red dots around bore)
+      for(var li=0;li<4;li++){
+        var la = li*Math.PI/2;
+        var laser = createMesh(new THREE.SphereGeometry(0.025,8,8),
+          new THREE.MeshStandardMaterial({color:0xff0000,roughness:0.1,emissive:0xff0000,emissiveIntensity:0.8}));
+        laser.position.set(Math.cos(la)*1.25,-0.1,Math.sin(la)*1.25+0.03);
+        g.add(laser);
+      }
+
+      // Gantry side panels - left
+      var sidePanelL = createMesh(new THREE.BoxGeometry(0.15,1.0,1.8), White);
+      sidePanelL.position.set(-1.55,0.2,0); g.add(sidePanelL);
+      // Gantry side panels - right
+      var sidePanelR = createMesh(new THREE.BoxGeometry(0.15,1.0,1.8), White);
+      sidePanelR.position.set(1.55,0.2,0); g.add(sidePanelR);
+
+      // ── Gantry Stand ──
+      var standBase = createMesh(new THREE.BoxGeometry(1.0,0.3,0.9,3,2,3), Gray);
+      standBase.position.y = -1.95; g.add(standBase);
+      // Stand column
+      var standCol = createMesh(new THREE.BoxGeometry(0.55,0.45,0.65,3,3,3), Gray);
+      standCol.position.y = -1.6; g.add(standCol);
+      // Tilt mechanism housing
+      var tiltHousing = createMesh(new THREE.CylinderGeometry(0.25,0.25,0.5,20), DarkGray);
+      tiltHousing.position.set(0,-1.35,0); tiltHousing.rotation.x = Math.PI/2; g.add(tiltHousing);
+
+      // ── Patient Table ──
+      // Main table board
+      var tableBoard = createMesh(new THREE.BoxGeometry(0.6,0.1,4.2,3,2,6), P(0xf8f8f8,0.3,0.05));
+      tableBoard.position.set(0,-0.55,0.5); g.add(tableBoard);
+      // Table rail left
+      var railL = createMesh(new THREE.BoxGeometry(0.04,0.06,4.0), M(0xcccccc,0.15,0.8));
+      railL.position.set(-0.32,-0.5,0.5); g.add(railL);
+      // Table rail right
+      var railR = createMesh(new THREE.BoxGeometry(0.04,0.06,4.0), M(0xcccccc,0.15,0.8));
+      railR.position.set(0.32,-0.5,0.5); g.add(railR);
+      // Mattress
+      var mattress = createMesh(new THREE.BoxGeometry(0.54,0.08,3.9,3,2,6),
+        new THREE.MeshStandardMaterial({color:0x4488bb,roughness:0.65,metalness:0}));
+      mattress.position.set(0,-0.44,0.48); g.add(mattress);
+      // Head rest bump
+      var headRest = createMesh(new THREE.BoxGeometry(0.5,0.1,0.4,3,2,3),
+        new THREE.MeshStandardMaterial({color:0x5599cc,roughness:0.6,metalness:0}));
+      headRest.position.set(0,-0.38,2.45); g.add(headRest);
+
+      // Table support pillar
+      var tablePillar = createMesh(new THREE.BoxGeometry(0.35,0.8,0.35,3,3,3), Gray);
+      tablePillar.position.set(0,-1.4,2.0); g.add(tablePillar);
+      // Table base
+      var tableBase = createMesh(new THREE.BoxGeometry(0.55,0.18,0.7,3,2,3), Gray);
+      tableBase.position.set(0,-1.78,2.0); g.add(tableBase);
+
+      // ── Control Panel on gantry side ──
+      var cpHousing = createMesh(new THREE.BoxGeometry(0.28,0.5,0.22,3,3,3), P(0xe0e0e0,0.25,0.15));
+      cpHousing.position.set(1.68,0.15,0.2); g.add(cpHousing);
+      // Touch screen
+      var cpScreen = createMesh(new THREE.PlaneGeometry(0.2,0.35),
+        new THREE.MeshStandardMaterial({color:0x112233,roughness:0.08,emissive:0x081018,emissiveIntensity:0.5}));
+      cpScreen.position.set(1.8,0.15,0.2); cpScreen.rotation.y = Math.PI/2; g.add(cpScreen);
+      // Control buttons
+      for(var bi=0;bi<3;bi++){
+        var btn = createMesh(new THREE.CylinderGeometry(0.03,0.03,0.02,12),
+          new THREE.MeshStandardMaterial({color:0x444444,roughness:0.2,emissive:0x111111,emissiveIntensity:0.2}));
+        btn.position.set(1.78,0.35-bi*0.12,-0.3); btn.rotation.x = Math.PI/2; g.add(btn);
+      }
+
       return g;
     }
 
-    // ── MODEL: CORI ──
+    // ── MODEL: CORI Surgical Robot (CORI手术机器人) ──
     function createCORI(){
       var g = new THREE.Group();
-      g.add(createMesh(new THREE.BoxGeometry(0.65,1.3,0.55,4,6,4), P(0xf0f0f0,0.25,0.1))).position.y = 0.15;
-      var screenFrame = createMesh(new THREE.BoxGeometry(0.5,0.55,0.04), M(0x333333,0.1,0.8));
-      screenFrame.position.set(0,0.45,0.28); g.add(screenFrame);
-      var screenDisp = createMesh(new THREE.PlaneGeometry(0.44,0.48),
-        new THREE.MeshStandardMaterial({color:0x1a3a6c,roughness:0.08,emissive:0x0d1f3c,emissiveIntensity:0.6}));
-      screenDisp.position.set(0,0.45,0.30); g.add(screenDisp);
-      var armJoint = createMesh(new THREE.SphereGeometry(0.1,20,20), M(0x888888,0.1,0.9));
-      armJoint.position.set(0,0.85,0.2); g.add(armJoint);
-      var armSeg = createMesh(new THREE.CylinderGeometry(0.04,0.04,0.5,16), M(0x999999,0.1,0.9));
-      armSeg.position.set(0,0.65,0.4); armSeg.rotation.x = Math.PI/3; g.add(armSeg);
-      g.add(createMesh(new THREE.BoxGeometry(0.75,0.15,0.7), P(0xe0e0e0,0.3,0.2))).position.y = -0.75;
-      for(var xi=-1;xi<=1;xi+=2){
-        for(var zi2=-1;zi2<=1;zi2+=2){
-          var wh = createMesh(new THREE.TorusGeometry(0.07,0.03,12,20),
-            new THREE.MeshStandardMaterial({color:0x222222,roughness:0.6,metalness:0.2}));
-          wh.position.set(xi*0.35,-0.81,zi2*0.3); wh.rotation.y = Math.PI/2; g.add(wh);
+      var White = P(0xf5f5f5,0.22,0.08);
+      var Gray = P(0xd5d5d5,0.28,0.12);
+      var DarkPlastic = P(0x3a3a3a,0.3,0.15);
+      var Metal = M(0xaaaaaa,0.1,0.85);
+
+      // ── Main Cart Body ──
+      var cartBody = createMesh(new THREE.BoxGeometry(0.6,1.2,0.5,5,8,5), White);
+      cartBody.position.y = 0.2; g.add(cartBody);
+
+      // Cart front panel - darker inset
+      var frontPanel = createMesh(new THREE.BoxGeometry(0.5,1.0,0.03), P(0xe8e8e8,0.3,0.1));
+      frontPanel.position.set(0,0.2,0.26); g.add(frontPanel);
+
+      // Side accent stripes
+      for(var si2=-1;si2<=1;si2+=2){
+        var stripe = createMesh(new THREE.BoxGeometry(0.04,0.9,0.52),
+          new THREE.MeshStandardMaterial({color:0x2196f3,roughness:0.3,metalness:0.1}));
+        stripe.position.set(si2*0.28,0.2,0); g.add(stripe);
+      }
+
+      // Storage compartment lines
+      for(var ci=0;ci<2;ci++){
+        var compLine = createMesh(new THREE.BoxGeometry(0.56,0.015,0.48), DarkPlastic);
+        compLine.position.set(0,-0.3+ci*0.5,0.02); g.add(compLine);
+      }
+
+      // Handle bar at top
+      var handleBar = createMesh(new THREE.CylinderGeometry(0.03,0.03,0.6,16), Metal);
+      handleBar.position.set(0,0.85,0.1); handleBar.rotation.z = Math.PI/2; g.add(handleBar);
+      // Handle mounts
+      for(var hm=-1;hm<=1;hm+=2){
+        var mount = createMesh(new THREE.BoxGeometry(0.05,0.08,0.06), Metal);
+        mount.position.set(hm*0.28,0.85,0.08); g.add(mount);
+      }
+
+      // ── Touchscreen Display ──
+      // Main arm from cart to screen
+      var armBase = createMesh(new THREE.CylinderGeometry(0.05,0.06,0.3,20), Metal);
+      armBase.position.set(0,0.9,0.2); g.add(armBase);
+
+      var armMidJoint = createMesh(new THREE.SphereGeometry(0.07,20,20), Metal);
+      armMidJoint.position.set(0,0.95,0.38); g.add(armMidJoint);
+
+      var armUpper = createMesh(new THREE.CylinderGeometry(0.04,0.05,0.4,16), Metal);
+      armUpper.position.set(0,0.85,0.55); armUpper.rotation.x = 0.6; g.add(armUpper);
+
+      var armEndJoint = createMesh(new THREE.SphereGeometry(0.06,16,16), Metal);
+      armEndJoint.position.set(0,0.95,0.8); g.add(armEndJoint);
+
+      // Screen housing
+      var screenHousing = createMesh(new THREE.BoxGeometry(0.48,0.35,0.05,3,3,2), DarkPlastic);
+      screenHousing.position.set(0,1.05,0.85); screenHousing.rotation.x = -0.15; g.add(screenHousing);
+      // Screen bezel
+      var screenBezel = createMesh(new THREE.BoxGeometry(0.44,0.31,0.02), M(0x222222,0.05,0.9));
+      screenBezel.position.set(0,1.05,0.88); screenBezel.rotation.x = -0.15; g.add(screenBezel);
+      // Screen display
+      var screenDisp = createMesh(new THREE.PlaneGeometry(0.38,0.26),
+        new THREE.MeshStandardMaterial({color:0x113355,roughness:0.05,emissive:0x0a1a2e,emissiveIntensity:0.7}));
+      screenDisp.position.set(0,1.05,0.89); screenDisp.rotation.x = -0.15; g.add(screenDisp);
+
+      // ── Base ──
+      var cartBase = createMesh(new THREE.BoxGeometry(0.7,0.15,0.65,3,2,4), Gray);
+      cartBase.position.y = -0.7; g.add(cartBase);
+
+      // Casters (wheels)
+      for(var wi=-1;wi<=1;wi+=2){
+        for(var wj=-1;wj<=1;wj+=2){
+          var casterMount = createMesh(new THREE.CylinderGeometry(0.04,0.05,0.06,16), Metal);
+          casterMount.position.set(wi*0.32,-0.78,wj*0.28); g.add(casterMount);
+          var wheel = createMesh(new THREE.CylinderGeometry(0.07,0.07,0.05,20),
+            new THREE.MeshStandardMaterial({color:0x1a1a1a,roughness:0.5,metalness:0.2}));
+          wheel.position.set(wi*0.32,-0.82,wj*0.28); wheel.rotation.z = Math.PI/2; g.add(wheel);
         }
       }
-      var hg = new THREE.Group();
-      hg.position.set(0.7,0.1,-0.6); hg.rotation.z = Math.PI/6; hg.rotation.y = -Math.PI/5;
-      hg.add(createMesh(new THREE.CylinderGeometry(0.06,0.07,0.55,20), P(0xd8d8d8,0.3,0.15)));
-      var tip = createMesh(new THREE.CylinderGeometry(0.02,0.04,0.18,16), M(0xcccccc,0.05,0.95));
-      tip.position.y = 0.34; hg.add(tip);
-      var tipCone = createMesh(new THREE.ConeGeometry(0.02,0.06,12), M(0xcccccc,0.05,0.95));
-      tipCone.position.y = 0.44; hg.add(tipCone);
-      g.add(hg);
-      var camStand = createMesh(new THREE.CylinderGeometry(0.03,0.03,0.7,16), M(0x999999,0.1,0.9));
-      camStand.position.set(-0.6,-0.1,-0.3); g.add(camStand);
-      var camBody = createMesh(new THREE.BoxGeometry(0.15,0.12,0.2), P(0x333333,0.2,0.3));
-      camBody.position.set(-0.6,0.3,-0.3); g.add(camBody);
+
+      // ── Robotic Handpiece ──
+      var hp = new THREE.Group();
+      hp.position.set(0.65,0.15,-0.65);
+      hp.rotation.z = 0.35;
+      hp.rotation.y = -0.25;
+
+      // Main body grip
+      var grip = createMesh(new THREE.CylinderGeometry(0.06,0.07,0.5,20), P(0xe0e0e0,0.3,0.12));
+      hp.add(grip);
+      // Ergonomic contour rings
+      for(var ri=-1;ri<=1;ri++){
+        var gripRing = createMesh(new THREE.TorusGeometry(0.075,0.012,12,20), P(0x555555,0.3,0.5));
+        gripRing.position.y = ri*0.14; hp.add(gripRing);
+      }
+      // Trigger guard
+      var guard = createMesh(new THREE.TorusGeometry(0.09,0.015,10,16), Metal);
+      guard.position.set(0.02,-0.1,0); guard.rotation.x = Math.PI/2; hp.add(guard);
+      // Trigger button
+      var trigger = createMesh(new THREE.CylinderGeometry(0.025,0.025,0.04,14),
+        new THREE.MeshStandardMaterial({color:0xff6600,roughness:0.2,metalness:0.1}));
+      trigger.position.set(0,-0.06,0); trigger.rotation.x = Math.PI/2; hp.add(trigger);
+      // Shaft
+      var shaft = createMesh(new THREE.CylinderGeometry(0.02,0.03,0.2,16), Metal);
+      shaft.position.y = 0.32; hp.add(shaft);
+      // Burr/cutting tip
+      var burr = createMesh(new THREE.SphereGeometry(0.025,12,12),
+        new THREE.MeshStandardMaterial({color:0xdddddd,roughness:0.05,metalness:0.95,emissive:0x111111,emissiveIntensity:0.1}));
+      burr.position.y = 0.44; hp.add(burr);
+      g.add(hp);
+
+      // ── Optical Tracking Camera ──
+      var camPole = createMesh(new THREE.CylinderGeometry(0.03,0.035,0.8,16), Metal);
+      camPole.position.set(-0.55,-0.15,-0.3); g.add(camPole);
+      var camJoint = createMesh(new THREE.SphereGeometry(0.05,14,14), Metal);
+      camJoint.position.set(-0.55,0.28,-0.3); g.add(camJoint);
+      var camBody = createMesh(new THREE.BoxGeometry(0.18,0.14,0.22,3,3,3), DarkPlastic);
+      camBody.position.set(-0.55,0.38,-0.3); g.add(camBody);
+      // Two camera lenses
+      for(var cl=-1;cl<=1;cl+=2){
+        var lens = createMesh(new THREE.CylinderGeometry(0.04,0.045,0.06,16),
+          new THREE.MeshStandardMaterial({color:0x111133,roughness:0.05,emissive:0x050515,emissiveIntensity:0.3}));
+        lens.position.set(-0.55,0.36,-0.43+cl*0.06); lens.rotation.x = Math.PI/2; g.add(lens);
+      }
+      // IR illuminators
+      for(var ir=-1;ir<=1;ir+=2){
+        var irLed = createMesh(new THREE.SphereGeometry(0.015,8,8),
+          new THREE.MeshStandardMaterial({color:0xff0000,roughness:0.1,emissive:0x330000,emissiveIntensity:0.5}));
+        irLed.position.set(-0.55+ir*0.06,0.32,-0.42); g.add(irLed);
+      }
+
       return g;
     }
 
-    // ── MODEL: da Vinci ──
+    // ── MODEL: da Vinci Surgical Robot (达芬奇手术机器人) ──
     function createDaVinci(){
       var g = new THREE.Group();
-      var base = createMesh(new THREE.BoxGeometry(1.2,0.22,0.9,4,2,4), P(0xececec,0.3,0.15));
-      base.position.y = -1.5; g.add(base);
-      for(var xi2=-1;xi2<=1;xi2+=2){
-        for(var zi3=-1;zi3<=1;zi3+=2){
-          var wh2 = createMesh(new THREE.CylinderGeometry(0.08,0.08,0.06,20),
-            new THREE.MeshStandardMaterial({color:0x1a1a1a,roughness:0.5,metalness:0.3}));
-          wh2.position.set(xi2*0.5,-1.62,zi3*0.38); wh2.rotation.z = Math.PI/2; g.add(wh2);
+      var White = P(0xf2f2f2,0.22,0.08);
+      var Gray = P(0xd8d8d8,0.28,0.12);
+      var MetalDark = M(0x777777,0.1,0.85);
+      var MetalLight = M(0xbbbbbb,0.1,0.85);
+      var ArmDrape = function(){ return new THREE.MeshStandardMaterial({color:0x1a6da0,roughness:0.55,metalness:0.05}); };
+      var CameraDrape = function(){ return new THREE.MeshStandardMaterial({color:0x174a6e,roughness:0.5,metalness:0.05}); };
+
+      // ── Patient Cart Base ──
+      var basePlate = createMesh(new THREE.BoxGeometry(1.3,0.15,1.0,5,2,4), White);
+      basePlate.position.y = -1.5; g.add(basePlate);
+      // Base trim
+      var baseTrim = createMesh(new THREE.BoxGeometry(1.34,0.04,1.04), M(0x999999,0.1,0.85));
+      baseTrim.position.y = -1.4; g.add(baseTrim);
+      // Base bottom skirt
+      var baseSkirt = createMesh(new THREE.BoxGeometry(1.2,0.08,0.9), P(0xdddddd,0.35,0.1));
+      baseSkirt.position.y = -1.58; g.add(baseSkirt);
+
+      // Locking casters (4 large wheels)
+      for(var bx=-1;bx<=1;bx+=2){
+        for(var bz=-1;bz<=1;bz+=2){
+          // Caster housing
+          var ch = createMesh(new THREE.CylinderGeometry(0.06,0.07,0.06,20), MetalDark);
+          ch.position.set(bx*0.55,-1.62,bz*0.4); g.add(ch);
+          // Wheel
+          var wh = createMesh(new THREE.CylinderGeometry(0.09,0.09,0.06,24),
+            new THREE.MeshStandardMaterial({color:0x1a1a1a,roughness:0.5,metalness:0.25}));
+          wh.position.set(bx*0.55,-1.66,bz*0.4); wh.rotation.z = Math.PI/2; g.add(wh);
+          // Brake pedal
+          var brake = createMesh(new THREE.BoxGeometry(0.05,0.02,0.1),
+            new THREE.MeshStandardMaterial({color:0xff4400,roughness:0.3,metalness:0.05}));
+          brake.position.set(bx*0.55+0.06,-1.6,bz*0.4); g.add(brake);
         }
       }
-      var col = createMesh(new THREE.BoxGeometry(0.4,1.5,0.4,4,6,4), P(0xf0f0f0,0.25,0.1));
-      col.position.y = -0.55; g.add(col);
-      var plat = createMesh(new THREE.BoxGeometry(0.5,0.1,0.5), M(0xcccccc,0.15,0.8));
-      plat.position.y = 0.25; g.add(plat);
 
+      // ── Main Column / Housing ──
+      // Lower housing section
+      var lowerHousing = createMesh(new THREE.BoxGeometry(0.55,0.8,0.55,5,6,5), White);
+      lowerHousing.position.y = -1.0; g.add(lowerHousing);
+      // Middle housing
+      var midHousing = createMesh(new THREE.BoxGeometry(0.5,0.6,0.5,4,5,4), White);
+      midHousing.position.y = -0.3; g.add(midHousing);
+      // Upper housing with subtle taper
+      var upperHousing = createMesh(new THREE.BoxGeometry(0.45,0.55,0.45,4,4,4), White);
+      upperHousing.position.y = 0.25; g.add(upperHousing);
+
+      // Front panel details
+      var frontPanel = createMesh(new THREE.BoxGeometry(0.4,0.65,0.03), P(0xe5e5e5,0.3,0.1));
+      frontPanel.position.set(0,-0.7,0.28); g.add(frontPanel);
+      // Ventilation slits
+      for(var vs=0;vs<4;vs++){
+        var slit = createMesh(new THREE.BoxGeometry(0.35,0.015,0.02), P(0x999999,0.3,0.2));
+        slit.position.set(0,-0.93+vs*0.12,0.3); g.add(slit);
+      }
+
+      // Top platform / setup joint interface
+      var topPlat = createMesh(new THREE.BoxGeometry(0.55,0.08,0.55), MetalLight);
+      topPlat.position.y = 0.55; g.add(topPlat);
+
+      // Sterile drape adapter ring
+      var adapterRing = createMesh(new THREE.TorusGeometry(0.22,0.04,16,32), MetalDark);
+      adapterRing.position.y = 0.58; adapterRing.rotation.x = Math.PI/2; g.add(adapterRing);
+
+      // ── Side Monitor Mount ──
+      var monArm = createMesh(new THREE.CylinderGeometry(0.04,0.04,0.3,16), MetalDark);
+      monArm.position.set(0.4,0.35,0.1); monArm.rotation.z = -0.5; g.add(monArm);
+      var monJoint = createMesh(new THREE.SphereGeometry(0.06,16,16), MetalLight);
+      monJoint.position.set(0.5,0.45,0.05); g.add(monJoint);
+
+      // ── 4 Robotic Arms ──
       var armConfigs = [
-        {angle:0,color:0x1a5276,isCamera:true},
-        {angle:-0.55,color:0x1a6e9e,isCamera:false},
-        {angle:-1.1,color:0x1a6e9e,isCamera:false},
-        {angle:0.55,color:0x1a6e9e,isCamera:false}
+        {angle:0, isCamera:true},          // Center - endoscope
+        {angle:-0.5, isCamera:false},      // Left 1
+        {angle:-1.0, isCamera:false},      // Left 2
+        {angle:0.5, isCamera:false}        // Right 1
       ];
+
       armConfigs.forEach(function(cfg){
         var ag = new THREE.Group();
-        ag.add(createMesh(new THREE.BoxGeometry(0.1,0.15,0.1), M(0x888888,0.1,0.9))).position.y = 0.32;
-        var shoulder = createMesh(new THREE.SphereGeometry(0.12,20,20), M(0x777777,0.08,0.9));
-        shoulder.position.y = 0.42; ag.add(shoulder);
-        var upperLen = 0.8;
-        var upperArm = createMesh(new THREE.CylinderGeometry(0.07,0.09,upperLen,20),
-          new THREE.MeshStandardMaterial({color:cfg.color,roughness:0.5,metalness:0.05}));
-        upperArm.position.y = 0.42-upperLen/2; upperArm.rotation.x = 0.7; ag.add(upperArm);
-        var elbowY = 0.42 - upperLen*Math.cos(0.7);
-        var elbowZ = -upperLen*Math.sin(0.7);
-        var elbow = createMesh(new THREE.SphereGeometry(0.1,16,16), M(0x666666,0.08,0.9));
-        elbow.position.set(0,elbowY,elbowZ); ag.add(elbow);
-        var forearmLen = 0.64;
-        var forearm = createMesh(new THREE.CylinderGeometry(0.05,0.06,forearmLen,20),
-          new THREE.MeshStandardMaterial({color:cfg.color,roughness:0.45,metalness:0.05}));
-        forearm.position.set(0,elbowY,elbowZ); forearm.rotation.x = -0.35; ag.add(forearm);
-        var wrist = createMesh(new THREE.SphereGeometry(0.06,12,12), M(0x666666,0.05,0.95));
-        var wDY = forearmLen * Math.sin(-0.35);
-        var wDZ = forearmLen * Math.cos(-0.35);
-        wrist.position.set(0,elbowY+wDY,elbowZ-wDZ); ag.add(wrist);
-        var eeg = new THREE.Group();
-        eeg.position.copy(wrist.position);
-        if(cfg.isCamera){
-          eeg.add(createMesh(new THREE.CylinderGeometry(0.04,0.04,0.35,16), M(0x333333,0.1,0.8))).position.y = -0.15;
-          eeg.add(createMesh(new THREE.CylinderGeometry(0.03,0.04,0.08,16),
-            new THREE.MeshStandardMaterial({color:0x111144,roughness:0.05,emissive:0x050520,emissiveIntensity:0.4}))).position.y = -0.34;
-        } else {
-          eeg.add(createMesh(new THREE.CylinderGeometry(0.02,0.02,0.4,12), M(0xcccccc,0.05,0.95))).position.y = -0.18;
-          var jawGeo = new THREE.BoxGeometry(0.02,0.04,0.12);
-          var jawMat = M(0xdddddd,0.05,0.95);
-          var j1 = createMesh(jawGeo, jawMat); j1.position.set(0.015,-0.42,0.03); j1.rotation.x = 0.3; eeg.add(j1);
-          var j2 = createMesh(jawGeo, jawMat); j2.position.set(-0.015,-0.42,-0.03); j2.rotation.x = -0.3; eeg.add(j2);
+        var Drape = cfg.isCamera ? CameraDrape() : ArmDrape();
+
+        // Setup joint base
+        var setupBase = createMesh(new THREE.CylinderGeometry(0.08,0.1,0.12,20), MetalDark);
+        setupBase.position.y = 0.6; ag.add(setupBase);
+
+        // Passive setup joint (large sphere)
+        var passiveJoint = createMesh(new THREE.SphereGeometry(0.11,22,22), MetalLight);
+        passiveJoint.position.y = 0.68; ag.add(passiveJoint);
+
+        // ── Shoulder joint ──
+        var shoulder = createMesh(new THREE.SphereGeometry(0.13,24,24), MetalLight);
+        shoulder.position.y = 0.82; ag.add(shoulder);
+
+        // ── Upper arm (draped) ──
+        var upperLen = 0.9;
+        var upperArm = createMesh(new THREE.CylinderGeometry(0.07,0.09,upperLen,24), Drape);
+        var upperAngle = 0.65;
+        upperArm.position.y = 0.82;
+        upperArm.position.z = -upperLen/2 * Math.sin(upperAngle);
+        upperArm.position.y -= upperLen/2 * Math.cos(upperAngle);
+        upperArm.rotation.x = upperAngle;
+        ag.add(upperArm);
+
+        // Upper arm drape rings
+        for(var dr=0;dr<3;dr++){
+          var drapeRing = createMesh(new THREE.TorusGeometry(0.095,0.015,12,24), M(0x3388aa,0.4,0.5));
+          // Position along upper arm
+          var t = (dr+1)/4;
+          var ry = 0.82 - upperLen*t*Math.cos(upperAngle);
+          var rz = -upperLen*t*Math.sin(upperAngle);
+          drapeRing.position.set(0,ry,rz);
+          drapeRing.rotation.x = upperAngle;
+          ag.add(drapeRing);
         }
+
+        // ── Elbow joint ──
+        var elbowY = 0.82 - upperLen*Math.cos(upperAngle);
+        var elbowZ = -upperLen*Math.sin(upperAngle);
+        var elbow = createMesh(new THREE.SphereGeometry(0.1,20,20), MetalLight);
+        elbow.position.set(0,elbowY,elbowZ); ag.add(elbow);
+
+        // ── Forearm (draped) ──
+        var forearmLen = 0.7;
+        var forearmAngle = -0.4;
+        var forearm = createMesh(new THREE.CylinderGeometry(0.05,0.065,forearmLen,24), Drape);
+        forearm.position.set(0,elbowY,elbowZ);
+        forearm.rotation.x = forearmAngle;
+        ag.add(forearm);
+
+        // ── Wrist joint ──
+        var wristY = elbowY + forearmLen*Math.sin(forearmAngle);
+        var wristZ = elbowZ - forearmLen*Math.cos(forearmAngle);
+        var wrist = createMesh(new THREE.SphereGeometry(0.07,16,16), MetalLight);
+        wrist.position.set(0,wristY,wristZ); ag.add(wrist);
+
+        // ── Instrument / End Effector ──
+        var eeg = new THREE.Group();
+        eeg.position.set(0,wristY,wristZ);
+
+        if(cfg.isCamera){
+          // Endoscope body
+          var scopeBody = createMesh(new THREE.CylinderGeometry(0.04,0.05,0.45,20), M(0x333333,0.1,0.75));
+          scopeBody.position.y = -0.2; eeg.add(scopeBody);
+          // Light guide connector
+          var lightGuide = createMesh(new THREE.CylinderGeometry(0.03,0.02,0.15,14),
+            new THREE.MeshStandardMaterial({color:0x444455,roughness:0.1,emissive:0x111122,emissiveIntensity:0.3}));
+          lightGuide.position.set(0.05,-0.1,0); lightGuide.rotation.z = -0.4; eeg.add(lightGuide);
+          // Camera head
+          var camHead = createMesh(new THREE.CylinderGeometry(0.045,0.05,0.06,20), MetalDark);
+          camHead.position.y = -0.44; eeg.add(camHead);
+          // Lens
+          var scopeLens = createMesh(new THREE.CylinderGeometry(0.035,0.04,0.04,16),
+            new THREE.MeshStandardMaterial({color:0x111133,roughness:0.05,emissive:0x050515,emissiveIntensity:0.5}));
+          scopeLens.position.y = -0.48; eeg.add(scopeLens);
+        } else {
+          // Instrument shaft
+          var shaft = createMesh(new THREE.CylinderGeometry(0.018,0.018,0.5,14), M(0xdddddd,0.05,0.95));
+          shaft.position.y = -0.22; eeg.add(shaft);
+          // Articulation joint
+          var artJoint = createMesh(new THREE.SphereGeometry(0.025,12,12), M(0x999999,0.05,0.9));
+          artJoint.position.y = -0.48; eeg.add(artJoint);
+          // EndoWrist jaws
+          var jawLen = 0.14;
+          var jawGeo = new THREE.BoxGeometry(0.015,0.03,jawLen,2,3,4);
+          var jawMat = M(0xdddddd,0.05,0.95);
+          var j1 = createMesh(jawGeo, jawMat);
+          j1.position.set(0.012,-0.57,0.03); j1.rotation.x = 0.25; eeg.add(j1);
+          var j2 = createMesh(jawGeo, jawMat);
+          j2.position.set(-0.012,-0.57,-0.03); j2.rotation.x = -0.25; eeg.add(j2);
+          // Serrated inner jaw faces
+          var serrGeo = new THREE.BoxGeometry(0.006,0.02,jawLen*0.7,2,2,4);
+          var serrMat = M(0x999999,0.1,0.7);
+          var s1 = createMesh(serrGeo, serrMat);
+          s1.position.set(0.004,-0.56,0.03); s1.rotation.x = 0.25; eeg.add(s1);
+          var s2 = createMesh(serrGeo, serrMat);
+          s2.position.set(-0.004,-0.56,-0.03); s2.rotation.x = -0.25; eeg.add(s2);
+        }
+
         ag.add(eeg);
         ag.rotation.y = cfg.angle;
         g.add(ag);
       });
+
+      // ── Laser targeting cross on top ──
+      var crossH = createMesh(new THREE.BoxGeometry(0.08,0.005,0.005),
+        new THREE.MeshStandardMaterial({color:0xff0000,roughness:0.1,emissive:0xff0000,emissiveIntensity:0.6}));
+      crossH.position.y = 0.75; g.add(crossH);
+      var crossV = createMesh(new THREE.BoxGeometry(0.005,0.005,0.08),
+        new THREE.MeshStandardMaterial({color:0xff0000,roughness:0.1,emissive:0xff0000,emissiveIntensity:0.6}));
+      crossV.position.y = 0.75; g.add(crossV);
+
       return g;
     }
 
