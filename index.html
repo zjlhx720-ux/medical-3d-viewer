@@ -214,18 +214,113 @@
   <span>鼠标拖拽旋转</span><span>滚轮缩放</span><span>右键平移</span><span>方向键 ← → 切换设备</span>
 </footer>
 
-<script type="importmap">
-{
-  "imports": {
-    "three": "https://registry.npmmirror.com/three/0.184.0/files/build/three.module.js",
-    "three/addons/": "https://registry.npmmirror.com/three/0.184.0/files/examples/jsm/"
+<script src="https://cdn.bootcdn.net/ajax/libs/three.js/r128/three.min.js"></script>
+
+<script>
+// ────────────────────────────────────
+// Simple OrbitControls (inline)
+// ────────────────────────────────────
+class OrbitControls {
+  constructor(camera, domElement) {
+    this.camera = camera;
+    this.domElement = domElement;
+    this.target = new THREE.Vector3(0, 0, 0);
+    this.enableDamping = true;
+    this.dampingFactor = 0.08;
+    this.autoRotate = false;
+    this.autoRotateSpeed = 1.2;
+    this.minDistance = 2.5;
+    this.maxDistance = 12;
+    this.maxPolarAngle = Math.PI * 0.7;
+    this.enablePan = true;
+    this._state = -1;
+    this._spherical = new THREE.Spherical();
+    this._panOffset = new THREE.Vector3();
+    this._rotateStart = new THREE.Vector2();
+    this._rotateEnd = new THREE.Vector2();
+    this._panStart = new THREE.Vector2();
+    this._panEnd = new THREE.Vector2();
+    this._dollyStart = new THREE.Vector2();
+    this._dollyEnd = new THREE.Vector2();
+    this._sphericalDelta = new THREE.Spherical();
+    this._scale = 1;
+    const offset = new THREE.Vector3().copy(camera.position).sub(this.target);
+    this._spherical.setFromVector3(offset);
+    this._bindEvents();
+  }
+  _bindEvents() {
+    const el = this.domElement;
+    el.addEventListener('pointerdown', e => this._onPointerDown(e));
+    el.addEventListener('pointermove', e => this._onPointerMove(e));
+    el.addEventListener('pointerup', e => this._onPointerUp(e));
+    el.addEventListener('wheel', e => this._onWheel(e), { passive: false });
+    el.addEventListener('contextmenu', e => e.preventDefault());
+    el.style.touchAction = 'none';
+  }
+  _onPointerDown(e) {
+    if (e.pointerType === 'touch') {
+      if (e.isPrimary) { this._state = 0; this._rotateStart.set(e.clientX, e.clientY); }
+      else { this._state = 2; this._panStart.set(e.clientX, e.clientY); }
+    } else {
+      if (e.button === 0) { this._state = 0; this._rotateStart.set(e.clientX, e.clientY); }
+      else if (e.button === 2 && this.enablePan) { this._state = 2; this._panStart.set(e.clientX, e.clientY); }
+    }
+  }
+  _onPointerMove(e) {
+    if (this._state === 0) {
+      this._rotateEnd.set(e.clientX, e.clientY);
+      this._sphericalDelta.theta -= (this._rotateEnd.x - this._rotateStart.x) * 0.005;
+      this._sphericalDelta.phi -= (this._rotateEnd.y - this._rotateStart.y) * 0.005;
+      this._rotateStart.copy(this._rotateEnd);
+    } else if (this._state === 2) {
+      this._panEnd.set(e.clientX, e.clientY);
+      const dx = (this._panEnd.x - this._panStart.x);
+      const dy = (this._panEnd.y - this._panStart.y);
+      const dist = this.camera.position.distanceTo(this.target);
+      const factor = dist * 0.002;
+      const right = new THREE.Vector3();
+      const up = new THREE.Vector3();
+      const quat = new THREE.Quaternion().setFromUnitVectors(
+        new THREE.Vector3(0, 1, 0),
+        new THREE.Vector3().copy(this.camera.position).sub(this.target).normalize()
+      );
+      right.set(-1, 0, 0).applyQuaternion(quat);
+      up.set(0, -1, 0).applyQuaternion(quat);
+      this._panOffset.add(right.multiplyScalar(dx * factor));
+      this._panOffset.add(up.multiplyScalar(dy * factor));
+      this._panStart.copy(this._panEnd);
+    }
+  }
+  _onPointerUp() { this._state = -1; }
+  _onWheel(e) {
+    e.preventDefault();
+    this._scale *= e.deltaY > 0 ? 1.08 : 0.92;
+  }
+  update() {
+    const s = this._spherical;
+    const delta = this._sphericalDelta;
+    const scale = this._scale;
+    s.theta += delta.theta;
+    s.phi += delta.phi;
+    s.phi = Math.max(0.05, Math.min(this.maxPolarAngle, s.phi));
+    s.radius *= scale;
+    s.radius = Math.max(this.minDistance, Math.min(this.maxDistance, s.radius));
+    s.makeSafe();
+    if (this.autoRotate) {
+      s.theta += 0.002 * this.autoRotateSpeed;
+    }
+    const pos = new THREE.Vector3().setFromSpherical(s).add(this.target).add(this._panOffset);
+    this.camera.position.lerp(pos, this.enableDamping ? 1 - this.dampingFactor : 1);
+    this.camera.lookAt(
+      new THREE.Vector3().copy(this.target).add(
+        new THREE.Vector3().copy(this._panOffset).multiplyScalar(0.5)
+      )
+    );
+    delta.set(0, 0, 0);
+    this._scale = 1;
+    this._panOffset.multiplyScalar(this.enableDamping ? 0.9 : 0);
   }
 }
-</script>
-
-<script type="module">
-import * as THREE from 'three';
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
 // ────────────────────────────────────
 // Constants - Device Data
@@ -275,7 +370,7 @@ const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.setSize(viewport.clientWidth, viewport.clientHeight);
 renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.shadowMap.type = THREE.PCFShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.2;
 viewport.appendChild(renderer.domElement);
@@ -321,7 +416,6 @@ keyLight.shadow.camera.right = 10;
 keyLight.shadow.camera.top = 10;
 keyLight.shadow.camera.bottom = -10;
 keyLight.shadow.bias = -0.0001;
-keyLight.shadow.normalBias = 0.02;
 scene.add(keyLight);
 
 const fillLight = new THREE.DirectionalLight(0x8899cc, 1.2);
