@@ -5,156 +5,49 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>医疗设备3D模型展示</title>
 <style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  :root {
-    --bg-primary: #0d1117;
-    --bg-sidebar: #161b22;
-    --bg-card: #1c2333;
-    --text-primary: #c9d1d9;
-    --text-secondary: #8b949e;
-    --accent: #58a6ff;
-    --accent-glow: rgba(88, 166, 255, 0.3);
-    --border: #30363d;
-    --active-bg: rgba(31, 111, 235, 0.2);
-    --danger: #f85149;
-    --success: #3fb950;
-  }
-  html, body { height: 100%; overflow: hidden; font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif; background: var(--bg-primary); color: var(--text-primary); }
-  body { display: flex; flex-direction: column; }
-
-  /* Header */
-  header {
-    height: 52px; min-height: 52px;
-    background: linear-gradient(135deg, #0d1117 0%, #161b22 100%);
-    border-bottom: 1px solid var(--border);
-    display: flex; align-items: center; padding: 0 20px; gap: 12px;
-    z-index: 10;
-  }
-  header .logo { font-size: 18px; font-weight: 700; letter-spacing: 0.5px; color: var(--accent); }
-  header .subtitle { font-size: 12px; color: var(--text-secondary); margin-left: auto; }
-
-  /* Main Layout */
-  main { display: grid; grid-template-columns: 260px 1fr; flex: 1; min-height: 0; }
-
-  /* Sidebar */
-  aside {
-    background: var(--bg-sidebar); border-right: 1px solid var(--border);
-    display: flex; flex-direction: column; overflow-y: auto; z-index: 5;
-  }
-  aside .nav-label {
-    font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px;
-    color: var(--text-secondary); padding: 16px 20px 8px;
-  }
-  aside .device-btn {
-    display: flex; align-items: center; gap: 10px;
-    padding: 12px 20px; border: none; background: transparent;
-    color: var(--text-primary); font-size: 14px; cursor: pointer;
-    transition: all 0.2s ease; text-align: left; width: 100%;
-    border-left: 3px solid transparent;
-  }
-  aside .device-btn:hover { background: rgba(88, 166, 255, 0.05); }
-  aside .device-btn.active { background: var(--active-bg); border-left-color: var(--accent); color: #fff; font-weight: 600; }
-  aside .device-btn .icon {
-    width: 28px; height: 28px; border-radius: 6px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 16px; background: var(--bg-card); flex-shrink: 0;
-  }
-  aside .device-btn.active .icon { background: rgba(88, 166, 255, 0.2); }
-  aside .divider { border-top: 1px solid var(--border); margin: 8px 0; }
-  aside .controls-section { padding: 12px 20px; }
-  aside .toggle-row {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 8px 0; font-size: 13px;
-  }
-  aside .toggle-switch {
-    position: relative; width: 40px; height: 22px; flex-shrink: 0;
-  }
-  aside .toggle-switch input { opacity: 0; width: 0; height: 0; }
-  aside .toggle-slider {
-    position: absolute; inset: 0; background: var(--border); border-radius: 11px;
-    cursor: pointer; transition: background 0.25s;
-  }
-  aside .toggle-slider::before {
-    content: ''; position: absolute; width: 16px; height: 16px;
-    left: 3px; bottom: 3px; background: #fff; border-radius: 50%; transition: transform 0.25s;
-  }
-  aside .toggle-switch input:checked + .toggle-slider { background: var(--accent); }
-  aside .toggle-switch input:checked + .toggle-slider::before { transform: translateX(18px); }
-
-  /* Viewport */
-  #viewport { position: relative; overflow: hidden; background: radial-gradient(ellipse at center, #1a2030 0%, #0d1117 70%); }
-  #viewport canvas { display: block; }
-
-  /* Info Panel */
-  #info-panel {
-    position: absolute; bottom: 20px; left: 20px; max-width: 360px;
-    background: rgba(22, 27, 34, 0.88); backdrop-filter: blur(12px);
-    border: 1px solid var(--border); border-radius: 10px; padding: 16px 20px;
-    pointer-events: none; transition: opacity 0.35s;
-  }
-  #info-panel .device-name { font-size: 20px; font-weight: 700; color: #fff; margin-bottom: 6px; }
-  #info-panel .device-desc { font-size: 13px; color: var(--text-secondary); line-height: 1.6; }
-  #info-panel .device-usage { margin-top: 8px; font-size: 12px; color: var(--accent); }
-  #info-panel .device-usage::before { content: '🏥 '; }
-
-  /* Controls Hint */
-  #controls-hint {
-    position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
-    font-size: 11px; color: rgba(139, 148, 158, 0.7); pointer-events: none;
-    text-align: center;
-  }
-
-  /* Transition Overlay */
-  #transition-overlay {
-    position: absolute; inset: 0; pointer-events: none;
-    display: flex; align-items: center; justify-content: center;
-    opacity: 0; transition: opacity 0.2s;
-  }
-  #transition-overlay.show { opacity: 1; }
-  #transition-overlay .spinner {
-    width: 36px; height: 36px; border: 3px solid var(--border);
-    border-top-color: var(--accent); border-radius: 50%;
-    animation: spin 0.7s linear infinite;
-  }
-  @keyframes spin { to { transform: rotate(360deg); } }
-
-  /* Footer */
-  footer {
-    height: 32px; min-height: 32px;
-    background: var(--bg-sidebar); border-top: 1px solid var(--border);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 11px; color: var(--text-secondary); gap: 24px;
-  }
-
-  /* Responsive - Tablet */
-  @media (max-width: 1024px) {
-    main { grid-template-columns: 200px 1fr; }
-    #info-panel { max-width: 280px; }
-    #info-panel .device-name { font-size: 16px; }
-  }
-
-  /* Responsive - Mobile */
-  @media (max-width: 768px) {
-    main { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
-    aside {
-      flex-direction: row; overflow-x: auto; overflow-y: hidden;
-      border-right: none; border-bottom: 1px solid var(--border);
-      padding: 6px 8px; gap: 4px; flex-shrink: 0;
-    }
-    aside .nav-label { display: none; }
-    aside .device-btn {
-      white-space: nowrap; padding: 8px 14px; border-left: none;
-      border-bottom: 2px solid transparent; border-radius: 8px 8px 0 0;
-      font-size: 12px; gap: 4px;
-    }
-    aside .device-btn.active { border-left-color: transparent; border-bottom-color: var(--accent); border-radius: 8px 8px 0 0; }
-    aside .device-btn .icon { width: 20px; height: 20px; font-size: 12px; border-radius: 4px; }
-    aside .divider, aside .controls-section { display: none; }
-    #info-panel { bottom: 10px; left: 10px; right: 10px; max-width: none; padding: 10px 14px; }
-    #info-panel .device-name { font-size: 15px; }
-    #info-panel .device-desc { font-size: 11px; }
-    #controls-hint { bottom: 6px; font-size: 10px; }
-    footer { font-size: 10px; gap: 12px; }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;overflow:hidden;font-family:'Microsoft YaHei','PingFang SC',sans-serif;background:#0d1117;color:#c9d1d9}
+  body{display:flex;flex-direction:column}
+  header{height:52px;min-height:52px;background:linear-gradient(135deg,#0d1117,#161b22);border-bottom:1px solid #30363d;display:flex;align-items:center;padding:0 20px;gap:12px;z-index:10}
+  header .logo{font-size:18px;font-weight:700;color:#58a6ff}
+  header .subtitle{font-size:12px;color:#8b949e;margin-left:auto}
+  main{display:grid;grid-template-columns:260px 1fr;flex:1;min-height:0}
+  aside{background:#161b22;border-right:1px solid #30363d;display:flex;flex-direction:column;overflow-y:auto;z-index:5}
+  aside .nav-label{font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:#8b949e;padding:16px 20px 8px}
+  aside .device-btn{display:flex;align-items:center;gap:10px;padding:12px 20px;border:none;background:transparent;color:#c9d1d9;font-size:14px;cursor:pointer;transition:all .2s;text-align:left;width:100%;border-left:3px solid transparent}
+  aside .device-btn:hover{background:rgba(88,166,255,.05)}
+  aside .device-btn.active{background:rgba(31,111,235,.2);border-left-color:#58a6ff;color:#fff;font-weight:600}
+  aside .device-btn .icon{width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:16px;background:#1c2333;flex-shrink:0}
+  aside .device-btn.active .icon{background:rgba(88,166,255,.2)}
+  aside .divider{border-top:1px solid #30363d;margin:8px 0}
+  aside .controls-section{padding:12px 20px}
+  aside .toggle-row{display:flex;align-items:center;justify-content:space-between;padding:8px 0;font-size:13px}
+  aside .toggle-switch{position:relative;width:40px;height:22px;flex-shrink:0}
+  aside .toggle-switch input{opacity:0;width:0;height:0}
+  aside .toggle-slider{position:absolute;inset:0;background:#30363d;border-radius:11px;cursor:pointer;transition:background .25s}
+  aside .toggle-slider::before{content:'';position:absolute;width:16px;height:16px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:transform .25s}
+  aside .toggle-switch input:checked+.toggle-slider{background:#58a6ff}
+  aside .toggle-switch input:checked+.toggle-slider::before{transform:translateX(18px)}
+  #viewport{position:relative;overflow:hidden;background:radial-gradient(ellipse at center,#1a2030 0%,#0d1117 70%)}
+  #viewport canvas{display:block}
+  #info-panel{position:absolute;bottom:20px;left:20px;max-width:360px;background:rgba(22,27,34,.88);backdrop-filter:blur(12px);border:1px solid #30363d;border-radius:10px;padding:16px 20px;pointer-events:none;transition:opacity .35s}
+  #info-panel .device-name{font-size:20px;font-weight:700;color:#fff;margin-bottom:6px}
+  #info-panel .device-desc{font-size:13px;color:#8b949e;line-height:1.6}
+  #info-panel .device-usage{margin-top:8px;font-size:12px;color:#58a6ff}
+  #info-panel .device-usage::before{content:'🏥 '}
+  #controls-hint{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);font-size:11px;color:rgba(139,148,158,.7);pointer-events:none;text-align:center}
+  footer{height:32px;min-height:32px;background:#161b22;border-top:1px solid #30363d;display:flex;align-items:center;justify-content:center;font-size:11px;color:#8b949e;gap:24px}
+  @media(max-width:768px){
+    main{grid-template-columns:1fr;grid-template-rows:auto 1fr}
+    aside{flex-direction:row;overflow-x:auto;overflow-y:hidden;border-right:none;border-bottom:1px solid #30363d;padding:6px 8px;gap:4px;flex-shrink:0}
+    aside .nav-label{display:none}
+    aside .device-btn{white-space:nowrap;padding:8px 14px;border-left:none;border-bottom:2px solid transparent;border-radius:8px 8px 0 0;font-size:12px;gap:4px}
+    aside .device-btn.active{border-left-color:transparent;border-bottom-color:#58a6ff;border-radius:8px 8px 0 0}
+    aside .device-btn .icon{width:20px;height:20px;font-size:12px;border-radius:4px}
+    aside .divider,aside .controls-section{display:none}
+    #info-panel{bottom:10px;left:10px;right:10px;max-width:none;padding:10px 14px}
+    #info-panel .device-name{font-size:15px}
+    footer{font-size:10px;gap:12px}
   }
 </style>
 </head>
@@ -168,45 +61,23 @@
 <main>
   <aside id="sidebar">
     <div class="nav-label">设备列表</div>
-    <button class="device-btn active" data-device="pacemaker">
-      <span class="icon">❤️</span>心脏起搏器
-    </button>
-    <button class="device-btn" data-device="ct-scanner">
-      <span class="icon">🫁</span>CT扫描仪
-    </button>
-    <button class="device-btn" data-device="cori">
-      <span class="icon">🦿</span>CORI手术机器人
-    </button>
-    <button class="device-btn" data-device="davinci">
-      <span class="icon">🤖</span>达芬奇手术机器人
-    </button>
+    <button class="device-btn active" data-device="pacemaker"><span class="icon">❤️</span>心脏起搏器</button>
+    <button class="device-btn" data-device="ct-scanner"><span class="icon">🫁</span>CT扫描仪</button>
+    <button class="device-btn" data-device="cori"><span class="icon">🦿</span>CORI手术机器人</button>
+    <button class="device-btn" data-device="davinci"><span class="icon">🤖</span>达芬奇手术机器人</button>
     <div class="divider"></div>
     <div class="controls-section">
-      <div class="toggle-row">
-        <span>🔄 自动旋转</span>
-        <label class="toggle-switch">
-          <input type="checkbox" id="toggle-auto-rotate" checked>
-          <span class="toggle-slider"></span>
-        </label>
-      </div>
-      <div class="toggle-row">
-        <span>📐 线框模式</span>
-        <label class="toggle-switch">
-          <input type="checkbox" id="toggle-wireframe">
-          <span class="toggle-slider"></span>
-        </label>
-      </div>
+      <div class="toggle-row"><span>🔄 自动旋转</span><label class="toggle-switch"><input type="checkbox" id="toggle-auto-rotate" checked><span class="toggle-slider"></span></label></div>
+      <div class="toggle-row"><span>📐 线框模式</span><label class="toggle-switch"><input type="checkbox" id="toggle-wireframe"><span class="toggle-slider"></span></label></div>
     </div>
   </aside>
-
   <section id="viewport">
     <div id="info-panel">
       <div class="device-name">心脏起搏器</div>
       <div class="device-desc">心脏起搏器是一种植入体内的电子医疗设备，通过电脉冲调节心跳节律。</div>
       <div class="device-usage">用于治疗心律失常、心动过缓等心脏疾病</div>
     </div>
-    <div id="controls-hint">🖱 拖拽旋转 &nbsp;|&nbsp; 滚轮缩放 &nbsp;|&nbsp; 右键平移 &nbsp;|&nbsp; ⌨ 方向键切换设备</div>
-    <div id="transition-overlay"><div class="spinner"></div></div>
+    <div id="controls-hint">🖱 拖拽旋转 | 滚轮缩放 | 右键平移 | 方向键切换设备</div>
   </section>
 </main>
 
@@ -215,1022 +86,151 @@
 </footer>
 
 <script src="three.min.js"></script>
-
 <script>
-// Debug: show status on page
-(function() {
-  var el = document.getElementById('controls-hint');
-  if (typeof THREE === 'undefined') {
-    el.textContent = '❌ Three.js 加载失败！CDN 不可访问。';
-    el.style.color = '#f85149';
-    el.style.fontSize = '14px';
-  } else {
-    el.textContent = '✅ Three.js r' + THREE.REVISION + ' 已加载';
-    el.style.color = '#3fb950';
-    el.style.fontSize = '13px';
+// ============ SIMPLE TEST ============
+(function(){
+  var status = document.getElementById('controls-hint');
+  if(typeof THREE === 'undefined'){
+    status.textContent = '❌ THREE.js 未定义 - 请检查 three.min.js 是否存在于同目录';
+    status.style.color = '#f85149';
+    status.style.fontSize = '13px';
+    return;
   }
+  status.textContent = '✅ THREE.js r' + THREE.REVISION + ' 加载成功';
+  status.style.color = '#3fb950';
+  status.style.fontSize = '13px';
 })();
 
-// ────────────────────────────────────
-// Simple OrbitControls (inline)
-// ────────────────────────────────────
-class OrbitControls {
-  constructor(camera, domElement) {
-    this.camera = camera;
-    this.domElement = domElement;
-    this.target = new THREE.Vector3(0, 0, 0);
-    this.enableDamping = true;
-    this.dampingFactor = 0.08;
-    this.autoRotate = false;
-    this.autoRotateSpeed = 1.2;
-    this.minDistance = 2.5;
-    this.maxDistance = 12;
-    this.maxPolarAngle = Math.PI * 0.7;
-    this.enablePan = true;
-    this._state = -1;
-    this._spherical = new THREE.Spherical();
-    this._panOffset = new THREE.Vector3();
-    this._rotateStart = new THREE.Vector2();
-    this._rotateEnd = new THREE.Vector2();
-    this._panStart = new THREE.Vector2();
-    this._panEnd = new THREE.Vector2();
-    this._dollyStart = new THREE.Vector2();
-    this._dollyEnd = new THREE.Vector2();
-    this._sphericalDelta = new THREE.Spherical();
-    this._scale = 1;
-    const offset = new THREE.Vector3().copy(camera.position).sub(this.target);
-    this._spherical.setFromVector3(offset);
-    this._bindEvents();
-  }
-  _bindEvents() {
-    const el = this.domElement;
-    el.addEventListener('pointerdown', e => this._onPointerDown(e));
-    el.addEventListener('pointermove', e => this._onPointerMove(e));
-    el.addEventListener('pointerup', e => this._onPointerUp(e));
-    el.addEventListener('wheel', e => this._onWheel(e), { passive: false });
-    el.addEventListener('contextmenu', e => e.preventDefault());
-    el.style.touchAction = 'none';
-  }
-  _onPointerDown(e) {
-    if (e.pointerType === 'touch') {
-      if (e.isPrimary) { this._state = 0; this._rotateStart.set(e.clientX, e.clientY); }
-      else { this._state = 2; this._panStart.set(e.clientX, e.clientY); }
-    } else {
-      if (e.button === 0) { this._state = 0; this._rotateStart.set(e.clientX, e.clientY); }
-      else if (e.button === 2 && this.enablePan) { this._state = 2; this._panStart.set(e.clientX, e.clientY); }
-    }
-  }
-  _onPointerMove(e) {
-    if (this._state === 0) {
-      this._rotateEnd.set(e.clientX, e.clientY);
-      this._sphericalDelta.theta -= (this._rotateEnd.x - this._rotateStart.x) * 0.005;
-      this._sphericalDelta.phi -= (this._rotateEnd.y - this._rotateStart.y) * 0.005;
-      this._rotateStart.copy(this._rotateEnd);
-    } else if (this._state === 2) {
-      this._panEnd.set(e.clientX, e.clientY);
-      const dx = (this._panEnd.x - this._panStart.x);
-      const dy = (this._panEnd.y - this._panStart.y);
-      const dist = this.camera.position.distanceTo(this.target);
-      const factor = dist * 0.002;
-      const right = new THREE.Vector3();
-      const up = new THREE.Vector3();
-      const quat = new THREE.Quaternion().setFromUnitVectors(
-        new THREE.Vector3(0, 1, 0),
-        new THREE.Vector3().copy(this.camera.position).sub(this.target).normalize()
-      );
-      right.set(-1, 0, 0).applyQuaternion(quat);
-      up.set(0, -1, 0).applyQuaternion(quat);
-      this._panOffset.add(right.multiplyScalar(dx * factor));
-      this._panOffset.add(up.multiplyScalar(dy * factor));
-      this._panStart.copy(this._panEnd);
-    }
-  }
-  _onPointerUp() { this._state = -1; }
-  _onWheel(e) {
-    e.preventDefault();
-    this._scale *= e.deltaY > 0 ? 1.08 : 0.92;
-  }
-  update() {
-    const s = this._spherical;
-    const delta = this._sphericalDelta;
-    const scale = this._scale;
-    s.theta += delta.theta;
-    s.phi += delta.phi;
-    s.phi = Math.max(0.05, Math.min(this.maxPolarAngle, s.phi));
-    s.radius *= scale;
-    s.radius = Math.max(this.minDistance, Math.min(this.maxDistance, s.radius));
-    s.makeSafe();
-    if (this.autoRotate) {
-      s.theta += 0.002 * this.autoRotateSpeed;
-    }
-    const pos = new THREE.Vector3().setFromSpherical(s).add(this.target).add(this._panOffset);
-    this.camera.position.lerp(pos, this.enableDamping ? 1 - this.dampingFactor : 1);
-    this.camera.lookAt(
-      new THREE.Vector3().copy(this.target).add(
-        new THREE.Vector3().copy(this._panOffset).multiplyScalar(0.5)
-      )
-    );
-    delta.set(0, 0, 0);
-    this._scale = 1;
-    this._panOffset.multiplyScalar(this.enableDamping ? 0.9 : 0);
-  }
-}
-
-// ────────────────────────────────────
-// Constants - Device Data
-// ────────────────────────────────────
-const DEVICES = [
-  {
-    id: 'pacemaker',
-    name: '心脏起搏器',
-    icon: '❤️',
-    description: '心脏起搏器是一种植入体内的电子医疗设备，由脉冲发生器和电极导线组成，通过发出电脉冲来调节心脏的跳动节律。',
-    usage: '用于治疗心律失常、心动过缓、心力衰竭等心脏疾病，每年全球超过100万患者接受起搏器植入手术。',
-  },
-  {
-    id: 'ct-scanner',
-    name: 'CT扫描仪',
-    icon: '🫁',
-    description: '计算机断层扫描（CT）设备利用X射线从多角度扫描人体，通过计算机重建生成横截面图像，是现代医学影像诊断的核心设备。',
-    usage: '广泛应用于肿瘤检测、创伤评估、血管成像、骨科检查等，可快速获取高分辨率的三维解剖结构图像。',
-  },
-  {
-    id: 'cori',
-    name: 'CORI手术机器人',
-    icon: '🦿',
-    description: '施乐辉CORI（CORI Surgical System）是一种便携式手持机器人辅助手术系统，专为关节置换手术设计，提供实时术中规划和精准骨面处理。',
-    usage: '主要用于膝关节和髋关节置换手术，通过3D建模和实时追踪实现个性化截骨和假体精准安放。',
-  },
-  {
-    id: 'davinci',
-    name: '达芬奇手术机器人',
-    icon: '🤖',
-    description: '达芬奇手术系统（da Vinci Surgical System）是全球应用最广泛的微创手术机器人平台，由医生操控台、患者手术车和多关节机械臂组成。',
-    usage: '广泛应用于泌尿外科、妇科、心胸外科、普外科等领域，提供超越人手极限的精准操作和3D高清可视化。',
-  },
-];
-
-// ────────────────────────────────────
-// THREE.js Setup
-// ────────────────────────────────────
-const viewport = document.getElementById('viewport');
-const infoPanel = document.getElementById('info-panel');
-const transitionOverlay = document.getElementById('transition-overlay');
-const toggleAutoRotate = document.getElementById('toggle-auto-rotate');
-const toggleWireframe = document.getElementById('toggle-wireframe');
-
-// Renderer
-const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-renderer.setSize(viewport.clientWidth, viewport.clientHeight);
-renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFShadowMap;
-renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.2;
-viewport.appendChild(renderer.domElement);
-
-// Scene
-const scene = new THREE.Scene();
-scene.background = null; // CSS handles background
-scene.fog = new THREE.Fog(0x0d1117, 5, 25);
-
-// Camera
-const camera = new THREE.PerspectiveCamera(45, viewport.clientWidth / viewport.clientHeight, 0.1, 100);
-camera.position.set(3.5, 2.2, 6.5);
-camera.lookAt(0, 0, 0);
-
-// Orbit Controls
-const controls = new OrbitControls(camera, renderer.domElement);
-controls.enableDamping = true;
-controls.dampingFactor = 0.08;
-controls.minDistance = 2.5;
-controls.maxDistance = 12;
-controls.maxPolarAngle = Math.PI * 0.7;
-controls.autoRotate = true;
-controls.autoRotateSpeed = 1.2;
-controls.target.set(0, 0.2, 0);
-controls.update();
-
-// Lighting
-const ambientLight = new THREE.AmbientLight(0x334466, 1.8);
-scene.add(ambientLight);
-
-const hemisphereLight = new THREE.HemisphereLight(0x8899cc, 0x223344, 1.0);
-scene.add(hemisphereLight);
-
-const keyLight = new THREE.DirectionalLight(0xffffff, 3.5);
-keyLight.position.set(6, 10, 4);
-keyLight.castShadow = true;
-keyLight.shadow.mapSize.width = 2048;
-keyLight.shadow.mapSize.height = 2048;
-keyLight.shadow.camera.near = 0.5;
-keyLight.shadow.camera.far = 50;
-keyLight.shadow.camera.left = -10;
-keyLight.shadow.camera.right = 10;
-keyLight.shadow.camera.top = 10;
-keyLight.shadow.camera.bottom = -10;
-keyLight.shadow.bias = -0.0001;
-scene.add(keyLight);
-
-const fillLight = new THREE.DirectionalLight(0x8899cc, 1.2);
-fillLight.position.set(-3, 2, -2);
-scene.add(fillLight);
-
-const rimLight = new THREE.DirectionalLight(0xaaccff, 2.0);
-rimLight.position.set(0, -0.5, 5);
-scene.add(rimLight);
-
-// Ground plane
-const groundGeo = new THREE.CircleGeometry(5, 64);
-const groundMat = new THREE.MeshStandardMaterial({ color: 0x1a2030, roughness: 0.7, metalness: 0.1 });
-const ground = new THREE.Mesh(groundGeo, groundMat);
-ground.rotation.x = -Math.PI / 2;
-ground.position.y = -2.6;
-ground.receiveShadow = true;
-ground.renderOrder = 1;
-scene.add(ground);
-
-// Grid helper (subtle) - using simple ring geometry
-const ringGeo = new THREE.TorusGeometry(4.5, 0.01, 8, 80);
-const ringMat = new THREE.MeshBasicMaterial({ color: 0x30363d, transparent: true, opacity: 0.5 });
-const ring = new THREE.Mesh(ringGeo, ringMat);
-ring.rotation.x = Math.PI / 2;
-ring.position.y = -2.59;
-scene.add(ring);
-
-// Model holder
-const modelHolder = new THREE.Group();
-scene.add(modelHolder);
-
-// ────────────────────────────────────
-// Model Factory Helpers
-// ────────────────────────────────────
-function createMetallicMaterial(color, roughness = 0.2, metalness = 0.85) {
-  return new THREE.MeshStandardMaterial({ color, roughness, metalness });
-}
-
-function createPlasticMaterial(color, roughness = 0.4, metalness = 0.05) {
-  return new THREE.MeshStandardMaterial({ color, roughness, metalness });
-}
-
-// Track disposables for cleanup
-let currentMaterials = [];
-let currentGeometries = [];
-
-function trackGeo(geo) { currentGeometries.push(geo); return geo; }
-function trackMat(mat) { currentMaterials.push(mat); return mat; }
-
-function createMesh(geo, mat, opts = {}) {
-  const mesh = new THREE.Mesh(trackGeo(geo), trackMat(mat));
-  if (opts.castShadow) mesh.castShadow = true;
-  if (opts.receiveShadow) mesh.receiveShadow = true;
-  if (opts.position) mesh.position.copy(opts.position);
-  if (opts.rotation) mesh.rotation.copy(opts.rotation);
-  return mesh;
-}
-
-function createTubeCurve(points, radius = 0.04, tubularSegments = 80, radialSegments = 16) {
-  const curve = new THREE.CatmullRomCurve3(points.map(p => new THREE.Vector3(p[0], p[1], p[2])));
-  return trackGeo(new THREE.TubeGeometry(curve, tubularSegments, radius, radialSegments, false));
-}
-
-// ────────────────────────────────────
-// Model 1: Pacemaker (心脏起搏器)
-// ────────────────────────────────────
-function createPacemaker() {
-  const group = new THREE.Group();
-
-  // Main body - rounded box (use box with segments for slight rounding feel)
-  const bodyGeo = trackGeo(new THREE.BoxGeometry(0.8, 0.45, 1.05, 4, 3, 4));
-  const bodyMat = trackMat(createMetallicMaterial(0xd4d4d4, 0.18, 0.75));
-  const body = new THREE.Mesh(bodyGeo, bodyMat);
-  body.castShadow = true;
-  group.add(body);
-
-  // Metallic rim
-  const rimGeo = trackGeo(new THREE.BoxGeometry(0.82, 0.08, 1.07));
-  const rimMat = trackMat(createMetallicMaterial(0xb0b0b0, 0.1, 0.95));
-  const rim = new THREE.Mesh(rimGeo, rimMat);
-  rim.position.y = 0.24;
-  rim.castShadow = true;
-  group.add(rim);
-
-  // Header / connector block (epoxy)
-  const headerGeo = trackGeo(new THREE.BoxGeometry(0.55, 0.28, 0.3));
-  const headerMat = trackMat(new THREE.MeshStandardMaterial({
-    color: 0xf8f8f8, roughness: 0.1, metalness: 0.1,
-    opacity: 0.82, transparent: true, depthWrite: true,
-  }));
-  const header = new THREE.Mesh(headerGeo, headerMat);
-  header.position.set(0, 0.38, 0);
-  header.castShadow = true;
-  group.add(header);
-
-  // Connector ports on header
-  for (let z of [-0.08, 0.08]) {
-    const portGeo = trackGeo(new THREE.CylinderGeometry(0.04, 0.04, 0.08, 16));
-    const portMat = trackMat(createMetallicMaterial(0x999999, 0.05, 0.95));
-    const port = new THREE.Mesh(portGeo, portMat);
-    port.position.set(0, 0.42, z);
-    port.rotation.x = Math.PI / 2;
-    group.add(port);
-  }
-
-  // Lead 1 - curving from header
-  const lead1Points = [
-    [0, 0.42, -0.08],
-    [0.15, 0.15, -0.45],
-    [0.35, -0.35, -0.9],
-    [0.5, -0.75, -1.2],
-    [0.55, -1.05, -1.35],
-  ];
-  const lead1Geo = createTubeCurve(lead1Points, 0.018, 64, 12);
-  const lead1Mat = trackMat(createPlasticMaterial(0x333333, 0.5, 0.3));
-  const lead1 = new THREE.Mesh(lead1Geo, lead1Mat);
-  lead1.castShadow = true;
-  group.add(lead1);
-
-  // Lead 2 - curving other direction
-  const lead2Points = [
-    [0, 0.42, 0.08],
-    [-0.12, 0.18, 0.4],
-    [-0.3, -0.3, 0.85],
-    [-0.45, -0.7, 1.15],
-    [-0.5, -1.0, 1.3],
-  ];
-  const lead2Geo = createTubeCurve(lead2Points, 0.018, 64, 12);
-  const lead2Mat = trackMat(createPlasticMaterial(0x333333, 0.5, 0.3));
-  const lead2 = new THREE.Mesh(lead2Geo, lead2Mat);
-  lead2.castShadow = true;
-  group.add(lead2);
-
-  // Electrode tips
-  for (const tipPos of [[0.55, -1.05, -1.35], [-0.5, -1.0, 1.3]]) {
-    const tipGeo = trackGeo(new THREE.SphereGeometry(0.03, 12, 12));
-    const tipMat = trackMat(createMetallicMaterial(0xcccccc, 0.05, 0.95));
-    const tip = new THREE.Mesh(tipGeo, tipMat);
-    tip.position.set(tipPos[0], tipPos[1], tipPos[2]);
-    group.add(tip);
-  }
-
-  // Engraving / label
-  const labelGeo = trackGeo(new THREE.PlaneGeometry(0.35, 0.15));
-  const labelMat = trackMat(new THREE.MeshStandardMaterial({
-    color: 0x333333, roughness: 0.5, metalness: 0.3, emissive: 0x111111, emissiveIntensity: 0.3,
-  }));
-  const label = new THREE.Mesh(labelGeo, labelMat);
-  label.position.set(0, 0.001, 0.53);
-  group.add(label);
-
-  return group;
-}
-
-// ────────────────────────────────────
-// Model 2: CT Scanner (CT扫描仪)
-// ────────────────────────────────────
-function createCTScanner() {
-  const group = new THREE.Group();
-
-  // Gantry outer ring
-  const outerRingGeo = trackGeo(new THREE.TorusGeometry(1.6, 0.48, 32, 80));
-  const outerRingMat = trackMat(createPlasticMaterial(0xf5f5f5, 0.3, 0.1));
-  const outerRing = new THREE.Mesh(outerRingGeo, outerRingMat);
-  outerRing.rotation.x = Math.PI / 2;
-  outerRing.castShadow = true;
-  outerRing.receiveShadow = true;
-  group.add(outerRing);
-
-  // Inner ring accent (blue)
-  const innerRingGeo = trackGeo(new THREE.TorusGeometry(1.35, 0.04, 16, 80));
-  const innerRingMat = trackMat(new THREE.MeshStandardMaterial({
-    color: 0x2196f3, roughness: 0.3, metalness: 0.1, emissive: 0x0d3b66, emissiveIntensity: 0.4,
-  }));
-  const innerRing = new THREE.Mesh(innerRingGeo, innerRingMat);
-  innerRing.rotation.x = Math.PI / 2;
-  group.add(innerRing);
-
-  // Inner ring detail ring
-  const detailRingGeo = trackGeo(new THREE.TorusGeometry(1.5, 0.02, 8, 80));
-  const detailRingMat = trackMat(createMetallicMaterial(0xcccccc, 0.1, 0.9));
-  const detailRing = new THREE.Mesh(detailRingGeo, detailRingMat);
-  detailRing.rotation.x = Math.PI / 2;
-  group.add(detailRing);
-
-  // Gantry base / stand
-  const gantryBaseGeo = trackGeo(new THREE.BoxGeometry(0.9, 0.35, 0.9));
-  const gantryBaseMat = trackMat(createPlasticMaterial(0xe0e0e0, 0.3, 0.2));
-  const gantryBase = new THREE.Mesh(gantryBaseGeo, gantryBaseMat);
-  gantryBase.position.y = -1.95;
-  gantryBase.castShadow = true;
-  gantryBase.receiveShadow = true;
-  group.add(gantryBase);
-
-  // Gantry neck connecting base to ring
-  const gantryNeckGeo = trackGeo(new THREE.BoxGeometry(0.5, 0.4, 0.6));
-  const gantryNeckMat = trackMat(createPlasticMaterial(0xe8e8e8, 0.25, 0.15));
-  const gantryNeck = new THREE.Mesh(gantryNeckGeo, gantryNeckMat);
-  gantryNeck.position.y = -1.6;
-  gantryNeck.castShadow = true;
-  group.add(gantryNeck);
-
-  // Patient bed - extends through the ring
-  const bedGeo = trackGeo(new THREE.BoxGeometry(0.55, 0.15, 3.8));
-  const bedMat = trackMat(createPlasticMaterial(0xe8e8e8, 0.35, 0.1));
-  const bed = new THREE.Mesh(bedGeo, bedMat);
-  bed.position.set(0, -0.55, 0.3);
-  bed.castShadow = true;
-  bed.receiveShadow = true;
-  group.add(bed);
-
-  // Mattress pad
-  const mattressGeo = trackGeo(new THREE.BoxGeometry(0.5, 0.07, 3.6));
-  const mattressMat = trackMat(new THREE.MeshStandardMaterial({
-    color: 0x5b9bd5, roughness: 0.6, metalness: 0.0,
-  }));
-  const mattress = new THREE.Mesh(mattressGeo, mattressMat);
-  mattress.position.set(0, -0.44, 0.28);
-  mattress.receiveShadow = true;
-  group.add(mattress);
-
-  // Bed support pillar
-  const pillarGeo = trackGeo(new THREE.BoxGeometry(0.4, 0.7, 0.4));
-  const pillarMat = trackMat(createPlasticMaterial(0xdcdcdc, 0.3, 0.2));
-  const pillar = new THREE.Mesh(pillarGeo, pillarMat);
-  pillar.position.set(0, -1.3, 1.6);
-  pillar.castShadow = true;
-  pillar.receiveShadow = true;
-  group.add(pillar);
-
-  // Control panel box on gantry
-  const panelGeo = trackGeo(new THREE.BoxGeometry(0.25, 0.45, 0.18));
-  const panelMat = trackMat(createPlasticMaterial(0xd8d8d8, 0.25, 0.15));
-  const panel = new THREE.Mesh(panelGeo, panelMat);
-  panel.position.set(1.75, 0.1, 0);
-  panel.castShadow = true;
-  group.add(panel);
-
-  // Small screen on panel
-  const screenGeo = trackGeo(new THREE.PlaneGeometry(0.18, 0.3));
-  const screenMat = trackMat(new THREE.MeshStandardMaterial({
-    color: 0x1a3a5c, roughness: 0.1, emissive: 0x0a1a2a, emissiveIntensity: 0.5,
-  }));
-  const screen = new THREE.Mesh(screenGeo, screenMat);
-  screen.position.set(1.84, 0.1, 0);
-  screen.rotation.y = Math.PI / 2;
-  group.add(screen);
-
-  return group;
-}
-
-// ────────────────────────────────────
-// Model 3: CORI Surgical Robot (CORI手术机器人)
-// ────────────────────────────────────
-function createCORI() {
-  const group = new THREE.Group();
-
-  // Main cart body
-  const cartGeo = trackGeo(new THREE.BoxGeometry(0.65, 1.3, 0.55, 4, 6, 4));
-  const cartMat = trackMat(createPlasticMaterial(0xf0f0f0, 0.25, 0.1));
-  const cart = new THREE.Mesh(cartGeo, cartMat);
-  cart.position.y = 0.15;
-  cart.castShadow = true;
-  cart.receiveShadow = true;
-  group.add(cart);
-
-  // Dark accent stripe on cart
-  const stripeGeo = trackGeo(new THREE.BoxGeometry(0.66, 0.08, 0.56));
-  const stripeMat = trackMat(createPlasticMaterial(0x2c3e50, 0.2, 0.1));
-  const stripe = new THREE.Mesh(stripeGeo, stripeMat);
-  stripe.position.y = 0.35;
-  group.add(stripe);
-
-  // Screen on front of cart
-  const screenFrameGeo = trackGeo(new THREE.BoxGeometry(0.5, 0.55, 0.04));
-  const screenFrameMat = trackMat(createMetallicMaterial(0x333333, 0.1, 0.8));
-  const screenFrame = new THREE.Mesh(screenFrameGeo, screenFrameMat);
-  screenFrame.position.set(0, 0.45, 0.28);
-  group.add(screenFrame);
-
-  const screenDisplayGeo = trackGeo(new THREE.PlaneGeometry(0.44, 0.48));
-  const screenDisplayMat = trackMat(new THREE.MeshStandardMaterial({
-    color: 0x1a3a6c, roughness: 0.08, emissive: 0x0d1f3c, emissiveIntensity: 0.6,
-  }));
-  const screenDisplay = new THREE.Mesh(screenDisplayGeo, screenDisplayMat);
-  screenDisplay.position.set(0, 0.45, 0.30);
-  group.add(screenDisplay);
-
-  // Display arm connecting screen to cart
-  const armJointGeo = trackGeo(new THREE.SphereGeometry(0.1, 20, 20));
-  const armJointMat = trackMat(createMetallicMaterial(0x888888, 0.1, 0.9));
-  const armJoint = new THREE.Mesh(armJointGeo, armJointMat);
-  armJoint.position.set(0, 0.85, 0.2);
-  group.add(armJoint);
-
-  const armSegmentGeo = trackGeo(new THREE.CylinderGeometry(0.04, 0.04, 0.5, 16));
-  const armSegmentMat = trackMat(createMetallicMaterial(0x999999, 0.1, 0.9));
-  const armSegment = new THREE.Mesh(armSegmentGeo, armSegmentMat);
-  armSegment.position.set(0, 0.65, 0.4);
-  armSegment.rotation.x = Math.PI / 3;
-  armSegment.castShadow = true;
-  group.add(armSegment);
-
-  // Base
-  const baseGeo = trackGeo(new THREE.BoxGeometry(0.75, 0.15, 0.7));
-  const baseMat = trackMat(createPlasticMaterial(0xe0e0e0, 0.3, 0.2));
-  const base = new THREE.Mesh(baseGeo, baseMat);
-  base.position.y = -0.75;
-  base.castShadow = true;
-  base.receiveShadow = true;
-  group.add(base);
-
-  // Wheels
-  for (let x of [-0.35, 0.35]) {
-    for (let z of [-0.3, 0.3]) {
-      const wheelGeo = trackGeo(new THREE.TorusGeometry(0.07, 0.03, 12, 20));
-      const wheelMat = trackMat(new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.6, metalness: 0.2 }));
-      const wheel = new THREE.Mesh(wheelGeo, wheelMat);
-      wheel.position.set(x, -0.81, z);
-      wheel.rotation.y = Math.PI / 2;
-      wheel.castShadow = true;
-      group.add(wheel);
-
-      // Wheel hub
-      const hubGeo = trackGeo(new THREE.CylinderGeometry(0.04, 0.04, 0.04, 16));
-      const hubMat = trackMat(createMetallicMaterial(0x999999, 0.1, 0.9));
-      const hub = new THREE.Mesh(hubGeo, hubMat);
-      hub.position.set(x, -0.81, z);
-      hub.rotation.z = Math.PI / 2;
-      group.add(hub);
-    }
-  }
-
-  // Handpiece (held by surgeon) - positioned to the side
-  const handpieceGroup = new THREE.Group();
-  handpieceGroup.position.set(0.7, 0.1, -0.6);
-  handpieceGroup.rotation.z = Math.PI / 6;
-  handpieceGroup.rotation.y = -Math.PI / 5;
-
-  const gripGeo = trackGeo(new THREE.CylinderGeometry(0.06, 0.07, 0.55, 20));
-  const gripMat = trackMat(createPlasticMaterial(0xd8d8d8, 0.3, 0.15));
-  const grip = new THREE.Mesh(gripGeo, gripMat);
-  grip.castShadow = true;
-  handpieceGroup.add(grip);
-
-  // Grip texture rings
-  for (let i = -1; i <= 1; i++) {
-    const ringGeo2 = trackGeo(new THREE.TorusGeometry(0.075, 0.01, 8, 20));
-    const ringMat2 = trackMat(createMetallicMaterial(0x555555, 0.3, 0.7));
-    const ring2 = new THREE.Mesh(ringGeo2, ringMat2);
-    ring2.position.y = i * 0.13;
-    handpieceGroup.add(ring2);
-  }
-
-  // Handpiece tip/burr
-  const tipGeoCyl = trackGeo(new THREE.CylinderGeometry(0.02, 0.04, 0.18, 16));
-  const tipMat = trackMat(createMetallicMaterial(0xcccccc, 0.05, 0.95));
-  const tipCyl = new THREE.Mesh(tipGeoCyl, tipMat);
-  tipCyl.position.y = 0.34;
-  handpieceGroup.add(tipCyl);
-
-  const tipGeoCone = trackGeo(new THREE.ConeGeometry(0.02, 0.06, 12));
-  const tipCone = new THREE.Mesh(tipGeoCone, tipMat);
-  tipCone.position.y = 0.44;
-  handpieceGroup.add(tipCone);
-
-  group.add(handpieceGroup);
-
-  // Optical tracking camera on a stand
-  const camStandGeo = trackGeo(new THREE.CylinderGeometry(0.03, 0.03, 0.7, 16));
-  const camStandMat = trackMat(createMetallicMaterial(0x999999, 0.1, 0.9));
-  const camStand = new THREE.Mesh(camStandGeo, camStandMat);
-  camStand.position.set(-0.6, -0.1, -0.3);
-  camStand.castShadow = true;
-  group.add(camStand);
-
-  const camBodyGeo = trackGeo(new THREE.BoxGeometry(0.15, 0.12, 0.2));
-  const camBodyMat = trackMat(createPlasticMaterial(0x333333, 0.2, 0.3));
-  const camBody = new THREE.Mesh(camBodyGeo, camBodyMat);
-  camBody.position.set(-0.6, 0.3, -0.3);
-  group.add(camBody);
-
-  const lensGeo = trackGeo(new THREE.CylinderGeometry(0.05, 0.06, 0.1, 16));
-  const lensMat = trackMat(new THREE.MeshStandardMaterial({
-    color: 0x111166, roughness: 0.05, emissive: 0x050520, emissiveIntensity: 0.3,
-  }));
-  const lens = new THREE.Mesh(lensGeo, lensMat);
-  lens.position.set(-0.6, 0.28, -0.42);
-  lens.rotation.x = Math.PI / 2;
-  group.add(lens);
-
-  return group;
-}
-
-// ────────────────────────────────────
-// Model 4: da Vinci Surgical Robot (达芬奇手术机器人)
-// ────────────────────────────────────
-function createDaVinci() {
-  const group = new THREE.Group();
-
-  // --- Base ---
-  const baseGeo = trackGeo(new THREE.BoxGeometry(1.2, 0.22, 0.9, 4, 2, 4));
-  const baseMat = trackMat(createPlasticMaterial(0xececec, 0.3, 0.15));
-  const base = new THREE.Mesh(baseGeo, baseMat);
-  base.position.y = -1.5;
-  base.castShadow = true;
-  base.receiveShadow = true;
-  group.add(base);
-
-  // Base trim
-  const baseTrimGeo = trackGeo(new THREE.BoxGeometry(1.24, 0.05, 0.94));
-  const baseTrimMat = trackMat(createMetallicMaterial(0x999999, 0.1, 0.9));
-  const baseTrim = new THREE.Mesh(baseTrimGeo, baseTrimMat);
-  baseTrim.position.y = -1.38;
-  group.add(baseTrim);
-
-  // Wheels
-  for (let x of [-0.5, 0.5]) {
-    for (let z of [-0.38, 0.38]) {
-      const wheelGeo = trackGeo(new THREE.CylinderGeometry(0.08, 0.08, 0.06, 20));
-      const wheelMat = trackMat(new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.5, metalness: 0.3 }));
-      const wheel = new THREE.Mesh(wheelGeo, wheelMat);
-      wheel.position.set(x, -1.62, z);
-      wheel.rotation.z = Math.PI / 2;
-      wheel.castShadow = true;
-      group.add(wheel);
-    }
-  }
-
-  // --- Central Column ---
-  const columnGeo = trackGeo(new THREE.BoxGeometry(0.4, 1.5, 0.4, 4, 6, 4));
-  const columnMat = trackMat(createPlasticMaterial(0xf0f0f0, 0.25, 0.1));
-  const column = new THREE.Mesh(columnGeo, columnMat);
-  column.position.y = -0.55;
-  column.castShadow = true;
-  column.receiveShadow = true;
-  group.add(column);
-
-  // Column top platform
-  const platformGeo = trackGeo(new THREE.BoxGeometry(0.5, 0.1, 0.5));
-  const platformMat = trackMat(createMetallicMaterial(0xcccccc, 0.15, 0.8));
-  const platform = new THREE.Mesh(platformGeo, platformMat);
-  platform.position.y = 0.25;
-  platform.castShadow = true;
-  group.add(platform);
-
-  // --- Robotic Arms ---
-  // Each arm: setup joint → upper segment → elbow → forearm → wrist → end effector
-  // Arms fan out from the top platform at different angles
-
-  const armConfigs = [
-    { angle: 0, length: 1.6, lift: 0.4, color: 0x1a5276, isCamera: true },   // Center camera arm
-    { angle: -0.55, length: 1.9, lift: 0.15, color: 0x1a6e9e },             // Left instrument arm 1
-    { angle: -1.1, length: 1.85, lift: 0.1, color: 0x1a6e9e },              // Left instrument arm 2
-    { angle: 0.55, length: 1.9, lift: 0.15, color: 0x1a6e9e },              // Right instrument arm 1
-  ];
-
-  armConfigs.forEach((config) => {
-    const armGroup = new THREE.Group();
-
-    // Setup joint - small box at the top platform
-    const setupJointGeo = trackGeo(new THREE.BoxGeometry(0.1, 0.15, 0.1));
-    const setupJointMat = trackMat(createMetallicMaterial(0x888888, 0.1, 0.9));
-    const setupJoint = new THREE.Mesh(setupJointGeo, setupJointMat);
-    setupJoint.position.y = 0.32;
-    armGroup.add(setupJoint);
-
-    // Shoulder joint sphere
-    const shoulderGeo = trackGeo(new THREE.SphereGeometry(0.12, 20, 20));
-    const shoulderMat = trackMat(createMetallicMaterial(0x777777, 0.08, 0.9));
-    const shoulder = new THREE.Mesh(shoulderGeo, shoulderMat);
-    shoulder.position.y = 0.42;
-    shoulder.castShadow = true;
-    armGroup.add(shoulder);
-
-    // Upper arm segment - blue draped
-    const upperLen = config.length * 0.5;
-    const upperArmGeo = trackGeo(new THREE.CylinderGeometry(0.07, 0.09, upperLen, 20));
-    const upperArmMat = trackMat(new THREE.MeshStandardMaterial({
-      color: config.color, roughness: 0.5, metalness: 0.05,
-    }));
-    const upperArm = new THREE.Mesh(upperArmGeo, upperArmMat);
-    upperArm.position.y = 0.42 - upperLen / 2;
-    upperArm.rotation.x = 0.7;
-    upperArm.castShadow = true;
-    armGroup.add(upperArm);
-
-    // Elbow joint
-    const elbowGeo = trackGeo(new THREE.SphereGeometry(0.1, 16, 16));
-    const elbowMat = trackMat(createMetallicMaterial(0x666666, 0.08, 0.9));
-    const elbow = new THREE.Mesh(elbowGeo, elbowMat);
-    // Position at end of upper arm
-    const elbowY = 0.42 - upperLen * Math.cos(0.7);
-    const elbowZ = -upperLen * Math.sin(0.7);
-    elbow.position.set(0, elbowY, elbowZ);
-    elbow.castShadow = true;
-    armGroup.add(elbow);
-
-    // Forearm segment
-    const forearmLen = config.length * 0.4;
-    const forearmGeo = trackGeo(new THREE.CylinderGeometry(0.05, 0.06, forearmLen, 20));
-    const forearmMat = trackMat(new THREE.MeshStandardMaterial({
-      color: config.color, roughness: 0.45, metalness: 0.05,
-    }));
-    const forearm = new THREE.Mesh(forearmGeo, forearmMat);
-    forearm.position.set(0, elbowY, elbowZ);
-    forearm.rotation.x = -0.35;
-    forearm.geometry.computeBoundingBox();
-    forearm.castShadow = true;
-    armGroup.add(forearm);
-
-    // Wrist joint
-    const wristGeo = trackGeo(new THREE.SphereGeometry(0.06, 12, 12));
-    const wristMat = trackMat(createMetallicMaterial(0x666666, 0.05, 0.95));
-    const wrist = new THREE.Mesh(wristGeo, wristMat);
-    const wristDZ = forearmLen * Math.cos(-0.35);
-    const wristDY = forearmLen * Math.sin(-0.35);
-    wrist.position.set(0, elbowY + wristDY, elbowZ - wristDZ);
-    wrist.castShadow = true;
-    armGroup.add(wrist);
-
-    // End effector
-    const endEffectorGroup = new THREE.Group();
-    endEffectorGroup.position.copy(wrist.position);
-
-    if (config.isCamera) {
-      // Camera/endoscope
-      const camBodyGeo = trackGeo(new THREE.CylinderGeometry(0.04, 0.04, 0.35, 16));
-      const camBodyMat2 = trackMat(createMetallicMaterial(0x333333, 0.1, 0.8));
-      const camBody2 = new THREE.Mesh(camBodyGeo, camBodyMat2);
-      camBody2.position.y = -0.15;
-      endEffectorGroup.add(camBody2);
-
-      const camLensGeo = trackGeo(new THREE.CylinderGeometry(0.03, 0.04, 0.08, 16));
-      const camLensMat = trackMat(new THREE.MeshStandardMaterial({
-        color: 0x111144, roughness: 0.05, emissive: 0x050520, emissiveIntensity: 0.4,
-      }));
-      const camLens = new THREE.Mesh(camLensGeo, camLensMat);
-      camLens.position.y = -0.34;
-      endEffectorGroup.add(camLens);
-    } else {
-      // Instrument
-      const instShaftGeo = trackGeo(new THREE.CylinderGeometry(0.02, 0.02, 0.4, 12));
-      const instShaftMat = trackMat(createMetallicMaterial(0xcccccc, 0.05, 0.95));
-      const instShaft = new THREE.Mesh(instShaftGeo, instShaftMat);
-      instShaft.position.y = -0.18;
-      endEffectorGroup.add(instShaft);
-
-      // Grasper jaws
-      const jaw1Geo = trackGeo(new THREE.BoxGeometry(0.02, 0.04, 0.12));
-      const jawMat = trackMat(createMetallicMaterial(0xdddddd, 0.05, 0.95));
-      const jaw1 = new THREE.Mesh(jaw1Geo, jawMat);
-      jaw1.position.set(0.015, -0.42, 0.03);
-      jaw1.rotation.x = 0.3;
-      endEffectorGroup.add(jaw1);
-
-      const jaw2 = new THREE.Mesh(jaw1Geo, jawMat);
-      jaw2.position.set(-0.015, -0.42, -0.03);
-      jaw2.rotation.x = -0.3;
-      endEffectorGroup.add(jaw2);
-    }
-
-    armGroup.add(endEffectorGroup);
-
-    // Position and rotate the entire arm group around the column
-    armGroup.rotation.y = config.angle;
-    armGroup.position.y = config.lift;
-    group.add(armGroup);
-  });
-
-  return group;
-}
-
-// ────────────────────────────────────
-// Model Factory Registry
-// ────────────────────────────────────
-const modelFactories = {
-  'pacemaker': createPacemaker,
-  'ct-scanner': createCTScanner,
-  'cori': createCORI,
-  'davinci': createDaVinci,
-};
-
-// ────────────────────────────────────
-// State Management
-// ────────────────────────────────────
-let currentDeviceId = 'pacemaker';
-let isWireframe = false;
-let isTransitioning = false;
-
-// ────────────────────────────────────
-// Dispose Helpers
-// ────────────────────────────────────
-function disposeModel(group) {
-  group.traverse((child) => {
-    if (child.geometry) child.geometry.dispose();
-    if (child.material) {
-      if (Array.isArray(child.material)) {
-        child.material.forEach(m => m.dispose());
-      } else {
-        child.material.dispose();
-      }
-    }
-  });
-}
-
-// ────────────────────────────────────
-// Model Switching with Transition
-// ────────────────────────────────────
-function switchToDevice(deviceId) {
-  if (isTransitioning || deviceId === currentDeviceId) return;
-  isTransitioning = true;
-  transitionOverlay.classList.add('show');
-
-  const oldGroup = modelHolder.children[0];
-
-  // Wait a frame then create new model
-  requestAnimationFrame(() => {
-    // Create new model
-    currentMaterials = [];
-    currentGeometries = [];
-    const newModel = modelFactories[deviceId]();
-    newModel.scale.set(0.3, 0.3, 0.3);
-    modelHolder.add(newModel);
-
-    // Animate in
-    const startTime = performance.now();
-    const duration = 450;
-
-    function animateIn(now) {
-      const elapsed = now - startTime;
-      const t = Math.min(elapsed / duration, 1.0);
-      // Ease out cubic
-      const eased = 1 - Math.pow(1 - t, 3);
-
-      // Scale out old
-      if (oldGroup) {
-        const oldScale = 1 - eased;
-        oldGroup.scale.setScalar(Math.max(oldScale, 0.01));
-        if (oldScale <= 0.02) {
-          disposeModel(oldGroup);
-          modelHolder.remove(oldGroup);
-        }
-      }
-
-      // Scale in new
-      const newScale = 0.3 + eased * 0.7;
-      newModel.scale.setScalar(newScale);
-
-      if (t < 1) {
-        requestAnimationFrame(animateIn);
-      } else {
-        // Cleanup
-        if (oldGroup && modelHolder.children.includes(oldGroup)) {
-          disposeModel(oldGroup);
-          modelHolder.remove(oldGroup);
-        }
-        newModel.scale.setScalar(1);
-        currentDeviceId = deviceId;
-        isTransitioning = false;
-        transitionOverlay.classList.remove('show');
-        applyWireframeIfNeeded();
-        controls.target.set(0, 0.2, 0);
-      }
-    }
-
-    requestAnimationFrame(animateIn);
-  });
-}
-
-// ────────────────────────────────────
-// Wireframe Toggle
-// ────────────────────────────────────
-const originalMaterialsMap = new WeakMap();
-
-function toggleWireframe(enable) {
-  isWireframe = enable;
-  applyWireframeIfNeeded();
-}
-
-function applyWireframeIfNeeded() {
-  modelHolder.traverse((child) => {
-    if (!child.isMesh || !child.material) return;
-    if (child === ground) return;
-
-    if (isWireframe) {
-      if (!originalMaterialsMap.has(child)) {
-        originalMaterialsMap.set(child, child.material);
-      }
-      const origColor = child.material.color ? child.material.color.getHex() : 0x58a6ff;
-      child.material = new THREE.MeshBasicMaterial({
-        color: origColor,
-        wireframe: true,
-        transparent: true,
-        opacity: 0.8,
-      });
-    } else {
-      const orig = originalMaterialsMap.get(child);
-      if (orig) {
-        child.material = orig;
-        originalMaterialsMap.delete(child);
-      }
-    }
-  });
-}
-
-// ────────────────────────────────────
-// UI Event Handlers
-// ────────────────────────────────────
-function updateInfoPanel(deviceId) {
-  const device = DEVICES.find(d => d.id === deviceId);
-  if (!device) return;
-  infoPanel.querySelector('.device-name').textContent = device.name;
-  infoPanel.querySelector('.device-desc').textContent = device.description;
-  infoPanel.querySelector('.device-usage').textContent = device.usage;
-}
-
-document.querySelectorAll('.device-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    const deviceId = btn.dataset.device;
-    if (deviceId === currentDeviceId || isTransitioning) return;
-    document.querySelectorAll('.device-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    updateInfoPanel(deviceId);
-    switchToDevice(deviceId);
-  });
+// Wait for DOM to fully settle
+window.addEventListener('DOMContentLoaded', function(){
+  setTimeout(function(){
+    startApp();
+  }, 100);
 });
 
-toggleAutoRotate.addEventListener('change', (e) => {
-  controls.autoRotate = e.target.checked;
-});
-
-toggleWireframe.addEventListener('change', (e) => {
-  toggleWireframe(e.target.checked);
-});
-
-// Keyboard navigation
-window.addEventListener('keydown', (e) => {
-  if (e.target.tagName === 'INPUT') return;
-  const currentIndex = DEVICES.findIndex(d => d.id === currentDeviceId);
-  let newIndex = currentIndex;
-
-  if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
-    newIndex = (currentIndex + 1) % DEVICES.length;
-  } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
-    newIndex = (currentIndex - 1 + DEVICES.length) % DEVICES.length;
-  }
-
-  if (newIndex !== currentIndex) {
-    e.preventDefault();
-    const deviceId = DEVICES[newIndex].id;
-    document.querySelectorAll('.device-btn').forEach(b => b.classList.remove('active'));
-    const targetBtn = document.querySelector(`.device-btn[data-device="${deviceId}"]`);
-    if (targetBtn) targetBtn.classList.add('active');
-    updateInfoPanel(deviceId);
-    switchToDevice(deviceId);
-  }
-});
-
-// Window resize
-window.addEventListener('resize', () => {
-  camera.aspect = viewport.clientWidth / viewport.clientHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(viewport.clientWidth, viewport.clientHeight);
-});
-
-// ────────────────────────────────────
-// Initial Load
-// ────────────────────────────────────
-function init() {
-  currentMaterials = [];
-  currentGeometries = [];
-  const initialModel = createPacemaker();
-  modelHolder.add(initialModel);
-  currentDeviceId = 'pacemaker';
-  updateInfoPanel('pacemaker');
-}
-
-function animate() {
-  requestAnimationFrame(animate);
-  controls.update();
-  renderer.render(scene, camera);
-}
-
-try {
-  init();
-  animate();
+function startApp(){
   var hint = document.getElementById('controls-hint');
-  hint.textContent = '🖱 拖拽旋转 | 滚轮缩放 | 右键平移 | 方向键切换设备';
-  hint.style.color = 'rgba(139, 148, 158, 0.7)';
-  hint.style.fontSize = '11px';
-  console.log('🏥 医疗设备3D模型展示已就绪');
-  console.log('  Three.js r' + THREE.REVISION);
-  console.log('  已加载设备:', DEVICES.map(function(d) { return d.name; }).join(', '));
-} catch(e) {
-  var hint = document.getElementById('controls-hint');
-  hint.textContent = '❌ 渲染错误: ' + e.message + ' (行 ' + e.lineNumber + ')';
-  hint.style.color = '#f85149';
+
+  // Check WebGL
+  try {
+    var testCanvas = document.createElement('canvas');
+    var gl = testCanvas.getContext('webgl') || testCanvas.getContext('experimental-webgl');
+    if(!gl){
+      hint.textContent = '❌ 您的浏览器不支持 WebGL';
+      hint.style.color = '#f85149';
+      hint.style.fontSize = '13px';
+      return;
+    }
+  } catch(e){
+    hint.textContent = '❌ WebGL 检测失败: ' + e.message;
+    hint.style.color = '#f85149';
+    hint.style.fontSize = '13px';
+    return;
+  }
+
+  // Setup
+  var viewport = document.getElementById('viewport');
+  var W = viewport.clientWidth;
+  var H = viewport.clientHeight;
+
+  hint.textContent = 'Viewport: ' + W + 'x' + H + ' | THREE r' + THREE.REVISION;
+  hint.style.color = '#58a6ff';
   hint.style.fontSize = '12px';
-  console.error('Init error:', e);
+
+  var renderer = new THREE.WebGLRenderer({antialias:true});
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setSize(W, H);
+  renderer.setClearColor(0x0d1117);
+  viewport.appendChild(renderer.domElement);
+
+  var scene = new THREE.Scene();
+  var camera = new THREE.PerspectiveCamera(50, W/H, 0.1, 100);
+  camera.position.set(4, 2.5, 6);
+  camera.lookAt(0, 0, 0);
+
+  // Lights
+  scene.add(new THREE.AmbientLight(0x446688, 2));
+  var dl = new THREE.DirectionalLight(0xffffff, 2);
+  dl.position.set(5, 10, 5);
+  scene.add(dl);
+
+  // Simple Cube + Sphere + Tube to test
+  var cube = new THREE.Mesh(
+    new THREE.BoxGeometry(1, 1, 1),
+    new THREE.MeshStandardMaterial({color:0xe74c3c, roughness:0.3, metalness:0.5})
+  );
+  cube.position.set(-0.8, 0, 0);
+  scene.add(cube);
+
+  var sphere = new THREE.Mesh(
+    new THREE.SphereGeometry(0.5, 32, 32),
+    new THREE.MeshStandardMaterial({color:0x3498db, roughness:0.2, metalness:0.6})
+  );
+  sphere.position.set(0.8, 0, 0);
+  scene.add(sphere);
+
+  // Tube test
+  var curve = new THREE.CatmullRomCurve3([
+    new THREE.Vector3(0, -0.5, 0),
+    new THREE.Vector3(0, 0.5, 0),
+    new THREE.Vector3(0.5, 1, 0),
+  ]);
+  var tube = new THREE.Mesh(
+    new THREE.TubeGeometry(curve, 64, 0.06, 16, false),
+    new THREE.MeshStandardMaterial({color:0x2ecc71, roughness:0.3, metalness:0.4})
+  );
+  tube.position.set(0, -0.3, 0);
+  scene.add(tube);
+
+  // Ground
+  scene.add(new THREE.GridHelper(6, 12, 0x30363d, 0x222833));
+
+  // Simple orbit controls
+  var isDragging = false, prevX = 0, prevY = 0;
+  var spherical = new THREE.Spherical();
+  var target = new THREE.Vector3(0, 0, 0);
+  spherical.setFromVector3(new THREE.Vector3().copy(camera.position).sub(target));
+
+  viewport.addEventListener('pointerdown', function(e){
+    isDragging = true;
+    prevX = e.clientX;
+    prevY = e.clientY;
+  });
+  window.addEventListener('pointermove', function(e){
+    if(!isDragging) return;
+    var dx = e.clientX - prevX;
+    var dy = e.clientY - prevY;
+    spherical.theta -= dx * 0.005;
+    spherical.phi -= dy * 0.005;
+    spherical.phi = Math.max(0.1, Math.min(Math.PI * 0.7, spherical.phi));
+    prevX = e.clientX;
+    prevY = e.clientY;
+  });
+  window.addEventListener('pointerup', function(){ isDragging = false; });
+  viewport.addEventListener('wheel', function(e){
+    e.preventDefault();
+    spherical.radius *= e.deltaY > 0 ? 1.08 : 0.92;
+    spherical.radius = Math.max(2, Math.min(15, spherical.radius));
+  }, {passive:false});
+
+  // Animation
+  var autoRotate = true;
+  document.getElementById('toggle-auto-rotate').addEventListener('change', function(e){
+    autoRotate = e.target.checked;
+  });
+
+  (function animate(){
+    requestAnimationFrame(animate);
+    if(autoRotate) spherical.theta += 0.003;
+    var pos = new THREE.Vector3().setFromSpherical(spherical).add(target);
+    camera.position.lerp(pos, 0.1);
+    camera.lookAt(target);
+    renderer.render(scene, camera);
+  })();
+
+  hint.textContent = '🖱 拖拽旋转 | 滚轮缩放 | ✅ 一切正常！';
+  hint.style.color = 'rgba(139,148,158,0.7)';
+  hint.style.fontSize = '11px';
 }
 </script>
 
