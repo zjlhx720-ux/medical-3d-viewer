@@ -86,6 +86,7 @@
 </footer>
 
 <script src="three.min.js"></script>
+<script src="GLTFLoader.js"></script>
 <script>
 (function(){
   var hint = document.getElementById('controls-hint');
@@ -747,10 +748,57 @@
       return g;
     }
 
+    // ── GLB Loader ──
+    var gltfLoader = new THREE.GLTFLoader();
+    var loadedGLBModels = {}; // Cache loaded GLB models
+
+    function loadGLBModel(url, callback){
+      // Return cached model if already loaded
+      if(loadedGLBModels[url]){
+        var cached = loadedGLBModels[url].clone(true);
+        callback(cached);
+        return;
+      }
+      gltfLoader.load(url, function(gltf){
+        var model = gltf.scene;
+        // Auto-scale to fit scene (target bounding sphere radius ~2)
+        var box = new THREE.Box3().setFromObject(model);
+        var size = box.getSize(new THREE.Vector3());
+        var maxDim = Math.max(size.x, size.y, size.z);
+        if(maxDim > 0){
+          var targetSize = 3.5;
+          var scale = targetSize / maxDim;
+          model.scale.setScalar(scale);
+        }
+        // Center model
+        var center = box.getCenter(new THREE.Vector3());
+        model.position.set(-center.x*model.scale.x, -center.y*model.scale.y, -center.z*model.scale.z);
+        // Enable shadows on all meshes
+        model.traverse(function(child){
+          if(child.isMesh){
+            child.castShadow = true;
+            child.receiveShadow = true;
+          }
+        });
+        // Cache original for future use
+        loadedGLBModels[url] = model.clone(true);
+        callback(model);
+      }, function(xhr){
+        // Loading progress
+        var pct = xhr.total ? Math.round(xhr.loaded/xhr.total*100) : 0;
+        hint.textContent = '加载CT模型... ' + pct + '%';
+        hint.style.color = '#58a6ff';
+      }, function(err){
+        hint.textContent = '❌ CT模型加载失败: ' + (err.message || '未知错误');
+        hint.style.color = '#f85149';
+        console.error('GLB load error:', err);
+      });
+    }
+
     // ── Device Registry ──
     var DEVICES = [
       {id:'pacemaker',name:'心脏起搏器',icon:'❤️',desc:'心脏起搏器是一种植入体内的电子医疗设备，由脉冲发生器和电极导线组成，通过电脉冲调节心跳节律。',usage:'用于治疗心律失常、心动过缓、心力衰竭等心脏疾病，全球每年超过100万患者接受起搏器植入手术。',factory:createPacemaker},
-      {id:'ct-scanner',name:'CT扫描仪',icon:'🫁',desc:'计算机断层扫描（CT）设备利用X射线从多角度扫描人体，通过计算机重建生成横截面图像，是现代医学影像诊断的核心设备。',usage:'广泛应用于肿瘤检测、创伤评估、血管成像、骨科检查，可快速获取高分辨率三维解剖结构图像。',factory:createCTScanner},
+      {id:'ct-scanner',name:'CT扫描仪',icon:'🫁',desc:'计算机断层扫描（CT）设备利用X射线从多角度扫描人体，通过计算机重建生成横截面图像，是现代医学影像诊断的核心设备。',usage:'广泛应用于肿瘤检测、创伤评估、血管成像、骨科检查，可快速获取高分辨率三维解剖结构图像。',isGLB:true, glbUrl:'CT.glb'},
       {id:'cori',name:'CORI手术机器人',icon:'🦿',desc:'施乐辉CORI（CORI Surgical System）是便携式手持机器人辅助手术系统，专为关节置换手术设计。',usage:'主要用于膝关节和髋关节置换手术，通过3D建模和实时追踪实现个性化截骨和假体精准安放。',factory:createCORI},
       {id:'davinci',name:'达芬奇手术机器人',icon:'🤖',desc:'达芬奇手术系统（da Vinci Surgical System）是全球应用最广泛的微创手术机器人平台。',usage:'广泛应用于泌尿外科、妇科、心胸外科、普外科，提供超越人手极限的精准操作和3D高清可视化。',factory:createDaVinci}
     ];
@@ -758,6 +806,7 @@
     // ── State ──
     var currentDeviceId = 'pacemaker';
     var isWireframe = false;
+    var isLoadingModel = false;
 
     // ── Model Switching ──
     function clearModelHolder(){
@@ -776,18 +825,35 @@
       }
     }
 
-    function loadModel(deviceId){
+    function loadModel(deviceId, callback){
       clearModelHolder();
       var device = DEVICES.filter(function(d){ return d.id === deviceId; })[0];
       if(!device) return;
-      var model = device.factory();
-      modelHolder.add(model);
       currentDeviceId = deviceId;
-      if(isWireframe) applyWireframe();
+
+      if(device.isGLB){
+        isLoadingModel = true;
+        hint.textContent = '⏳ 加载模型中...';
+        hint.style.color = '#58a6ff';
+        loadGLBModel(device.glbUrl, function(model){
+          modelHolder.add(model);
+          isLoadingModel = false;
+          if(isWireframe) applyWireframe();
+          hint.textContent = '🖱 拖拽旋转 | 滚轮缩放 | 右键平移 | 方向键切换设备';
+          hint.style.color = 'rgba(139,148,158,0.7)';
+          hint.style.fontSize = '11px';
+          if(callback) callback();
+        });
+      } else {
+        var model = device.factory();
+        modelHolder.add(model);
+        if(isWireframe) applyWireframe();
+        if(callback) callback();
+      }
     }
 
     function switchToDevice(deviceId){
-      if(deviceId === currentDeviceId) return;
+      if(deviceId === currentDeviceId || isLoadingModel) return;
       loadModel(deviceId);
       updateInfoPanel(deviceId);
       target.set(0, 0.2, 0);
